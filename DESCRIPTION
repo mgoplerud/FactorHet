@@ -1,0 +1,18 @@
+Package: FactorHet
+Title: Estimate Heterogeneous Effects in Factorial Experiments Using Clustering and Sparsity
+Version: 0.0.0.1
+Author: Max Goplerud <mgoplerud@pitt.edu>, Kosuke Imai <imai@harvard.edu>, Nicole E. Pashley <nicole.pashley@rutgers.edu>
+Maintainer: Max Goplerud <mgoplerud@pitt.edu>
+Description: This package faciliates the estimation of heterogeneous effects in factorial (and conjoint) models. Its details are fully described in Goplerud, Imai, and Pashley (2022) <doi:10.48550/ARXIV.2201.01357>. The methodology employs a Bayesian finite mixture of regularized logistic experts, where moderators can affect each observation's probability of cluster membership and a sparsity-inducing prior fuses together levels of each factor while respecting ANOVA-style sum-to-zero constraints.
+Depends: R (>= 3.4.0)
+License: GPL (>= 2)
+Encoding: UTF-8
+RoxygenNote: 7.1.2
+LinkingTo: Rcpp, RcppEigen
+Imports: Rcpp (>= 1.0.1), RcppEigen (>= 0.3.3.4.0), Matrix, 
+    rlang, ggplot2, reshape2, methods,
+    ParamHelpers, dplyr, mlr, mlrMBO, smoof, tictoc
+Suggests: 
+    FNN, RSpectra, mclust,
+    tgp, testthat,
+LazyData: true
