@@ -296,13 +296,10 @@ cluster_table_fun<-function(data_obj, clus_var_nam1, clus_var_nam2){
   return(table.dat)
 }
 
-
-#' Visualize the effects of moderators
+#' Visualize the Effects of Moderators
 #' 
-#' Visualize the effects of moderators on cluster membership. Provides a graph
-#' of the posterior (predictive) distribution as well as the marginal effect of
-#' changing each of the moderators. For each function, assigning the output to
-#' an object returns the raw underlying data used to create the figure.
+#' Report an estimate of the average marginal effect of changing a moderator on
+#' the posterior predictive probability of cluster membership.
 #' 
 #' @param object Object fit using \code{FactorHet} or \code{FactorHet_mbo}.
 #' @param newdata Default \code{NULL} marginalizes over the estimation data.
@@ -315,6 +312,34 @@ cluster_table_fun<-function(data_obj, clus_var_nam1, clus_var_nam2){
 #'   effect difference between.
 #' @importFrom reshape2 dcast melt
 #' @import ggplot2
+#' 
+#' @details For each moderator, this function calculates the average marginal
+#'   effect of changing the moderator on the probability of cluster membership
+#'   \emph{controlling for all other moderators}. Univariate summaries can be
+#'   found using \link{posterior_by_moderators}.
+#'   
+#'   Formally, following Goplerud
+#'   et al. (2022) [Equation 12], it reports the following for each moderator j
+#'   and two values x_1 and x_0.
+#'   
+#'   \deqn{E[\pi_k(X_{ij} = x_1,X_{i,-j}) - \pi_k(X_{ij} = x_0,X_{i,-j})]}
+#'   
+#'   The expectation is calculated using an average over all observations in the
+#'   data. It thus calculates the "average marginal effect" where each
+#'   observation has moderator j set to x_1 and the difference in probability
+#'   from the moderator set to x_0 is calculated.
+#'
+#'   For variables with two levels (e.g. binary), the two levels are compared.
+#'   For factor variables, they are compared against a baseline level. For
+#'   continuous variables, they set are to quantiles specified in
+#'   \code{quant_continuous}, by default the 25th and 75th percentiles.
+#'   
+#'   In the accompanying plot, dark arrows indicate a p-value below 0.05 whereas
+#'   light/transparent arrows indicate a p-value above 0.05.
+#'
+#' @return A list of two elements. It contains, respectively, the ggplot object
+#'   and the data ("plot" and "data").
+#' 
 #' @export
 moderator_AME <- function(object, newdata = NULL, vcov = TRUE,
                           se.method = NULL,

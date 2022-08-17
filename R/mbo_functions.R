@@ -233,6 +233,12 @@ FactorHet_mbo_control <- function(
     }
     rm(check_valid)
   }
+  
+  if (mbo_method == 'regr.bgp'){
+    if (!requireNamespace('tgp', quietly = FALSE)){
+      warning('mbo_method="regr.bgp" needs "tgp" installed.')
+    }
+  }
   output <- mget(ls())
   return(output)
 }

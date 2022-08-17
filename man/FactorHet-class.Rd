@@ -96,6 +96,13 @@ The following methods with the arguments given above exist. All
   information about the MBO, i.e. proposed values and objectives.}
   \item{posterior_FactorHet: }{For a model with \code{K > 1}, visualize the
   posterior for each observation and the posterior predictive implied by the
-  moderators.}
+  moderators. The output is a list of class \code{FactorHet_vis} that
+  contains the posterior and posterior-predictive probabilities in the
+  argument \code{"data"}. This data.frame has four columns: "group" for the
+  individual i's id, "post.predict" for the posterior predictive probability
+  (the probability of cluster membership if no data were observed), i.e.
+  \eqn{\pi_{ik}}, and the posterior probability (the probability of cluster
+  membership from the EM algorithm after observing the data), i.e.
+  \eqn{E[z_ik]}.}
  }
 }

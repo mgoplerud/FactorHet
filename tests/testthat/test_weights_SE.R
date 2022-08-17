@@ -18,10 +18,11 @@ test_that('Standard errors work with weights (K=1)', {
   dta$weights <- wgt[dta$group]
   
   simple_logit <- FactorHet(formula = y ~ state * letter, design = dta,
-                            K = 1, lambda = 0)
+    K = 1, lambda = 0,
+    control = FactorHet_control(tolerance.parameters = 0, tolerance.logposterior =  0))
   weight_logit <- FactorHet(formula = y ~ state * letter, design = dta,
-                            K = 1, lambda = 0, weights = ~ weights,
-                            control = FactorHet_control(return_data = TRUE))
+    K = 1, lambda = 0, weights = ~ weights,
+    control = FactorHet_control(tolerance.logposterior = 0, tolerance.parameters = 0, return_data = TRUE))
   
   X <- weight_logit$internal_parameters$data$X
   y <- weight_logit$internal_parameters$data$y  
@@ -47,7 +48,8 @@ test_that('Standard errors work with weights (K=1)', {
   est_simple <- FactorHet(formula = y ~ state + letter, design = dta, K = 1, 
                           lambda = 0, moderator = ~ mod,
                           weights = ~ weights,
-                          control = FactorHet_control(prior_var_beta = 1/3, 
+                          control = FactorHet_control(tolerance.logposterior = 0,
+                            tolerance.parameters = 0, prior_var_beta = 1/3, 
                                                       log_method = 'standard',
                                                       return_data = TRUE))  
   pred_simple <- predict(est_simple)
@@ -58,3 +60,4 @@ test_that('Standard errors work with weights (K=1)', {
   vcov_analytic <- basis_M %*% vcov_cons %*% t(basis_M)
   expect_equivalent(vcov(est_simple), as.matrix(vcov_analytic))
 })
+

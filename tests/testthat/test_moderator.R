@@ -30,9 +30,9 @@ test_that('Confim working post regression functions (moderator)', {
   expect_false(is.null(est_mod_eff))  
   expect_false(is.null(est_mod_post)) 
   
-  expect_equivalent(est_mod_post$compare$post.predict, 
+  expect_equivalent(est_mod_post$data$post.predict, 
                     est_simple$posterior$posterior_predictive$cluster_1)
-  expect_equivalent(est_mod_post$compare$posterior, 
+  expect_equivalent(est_mod_post$data$posterior, 
                     est_simple$posterior$posterior$cluster_1)
   
 })

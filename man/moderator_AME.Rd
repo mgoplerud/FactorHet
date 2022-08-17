@@ -2,7 +2,7 @@
 % Please edit documentation in R/visualization_functions.R
 \name{moderator_AME}
 \alias{moderator_AME}
-\title{Visualize the effects of moderators}
+\title{Visualize the Effects of Moderators}
 \usage{
 moderator_AME(
   object,
@@ -27,9 +27,36 @@ effects of moderators changing on that data.}
 \item{quant_continuous}{For continuous moderator, two quantiles to show
 effect difference between.}
 }
+\value{
+A list of two elements. It contains, respectively, the ggplot object
+  and the data ("plot" and "data").
+}
 \description{
-Visualize the effects of moderators on cluster membership. Provides a graph
-of the posterior (predictive) distribution as well as the marginal effect of
-changing each of the moderators. For each function, assigning the output to
-an object returns the raw underlying data used to create the figure.
+Report an estimate of the average marginal effect of changing a moderator on
+the posterior predictive probability of cluster membership.
+}
+\details{
+For each moderator, this function calculates the average marginal
+  effect of changing the moderator on the probability of cluster membership
+  \emph{controlling for all other moderators}. Univariate summaries can be
+  found using \link{posterior_by_moderators}.
+  
+  Formally, following Goplerud
+  et al. (2022) [Equation 12], it reports the following for each moderator j
+  and two values x_1 and x_0.
+  
+  \deqn{E[\pi_k(X_{ij} = x_1,X_{i,-j}) - \pi_k(X_{ij} = x_0,X_{i,-j})]}
+  
+  The expectation is calculated using an average over all observations in the
+  data. It thus calculates the "average marginal effect" where each
+  observation has moderator j set to x_1 and the difference in probability
+  from the moderator set to x_0 is calculated.
+
+  For variables with two levels (e.g. binary), the two levels are compared.
+  For factor variables, they are compared against a baseline level. For
+  continuous variables, they set are to quantiles specified in
+  \code{quant_continuous}, by default the 25th and 75th percentiles.
+  
+  In the accompanying plot, dark arrows indicate a p-value below 0.05 whereas
+  light/transparent arrows indicate a p-value above 0.05.
 }

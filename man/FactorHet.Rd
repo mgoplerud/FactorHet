@@ -94,7 +94,7 @@ Returns an object of class \code{FactorHet}. Typical use will involve
   \item{K: }{The number of clusters}
   \item{posterior: }{Posterior cluster probability for each observation; list
   of two data.frames one with posterior (\code{"posterior"}) and one
-  (\code{"posterior_predictive"}) based on the probabilities pi_{ik} implied
+  (\code{"posterior_predictive"}) based on the probabilities \eqn{\pi_{ik}} implied
   by the moderators.}
   \item{information_criterion: }{Information on the information criterion estiamted.}
   \item{internal_parameters: }{Internal parameters; for debugging or use by other functions}

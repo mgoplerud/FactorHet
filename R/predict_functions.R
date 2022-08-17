@@ -10,7 +10,9 @@
 #' @param type How to generate the prediction? If \code{"posterior"} (default),
 #'   use the posterior probabilities for each observation in the training data
 #'   for weighting the clusters. If \code{"posterior_predictive"}, use the
-#'   cluster memberships implied by the moderator parameters, e.g. pi_{ik}.
+#'   cluster memberships implied by the moderator parameters, e.g. pi_{ik}. If
+#'   using this for evaluating out-of-sample accuracy, using
+#'   \code{"posterior_predictive"} may be sensible.
 #' @param by_cluster Default of \code{FALSE}. If \code{TRUE}, return predicted
 #'   probabilities by cluster.
 #' @param return Default of \code{"prediction"} returns the prediction. Use

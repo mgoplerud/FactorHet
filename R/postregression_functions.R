@@ -174,9 +174,13 @@ cjoint_plot <- function(object, baseline = NA){
 #' @param object An object from FactorHet or FactorHet_mbo.
 #' @param design The dataset used to estimate the marginal effects. By default
 #'   (NULL), the estimation data is used.
-#' @param baseline "NULL" (choose baseline as first factor level), a named list
-#'   for each factor and a corresponding baseline level, or "NA" for no baseline
-#'   (approximating the "marginal means" from Leeper et al. [2020])
+#' @param baseline For \code{marginal_AME}, the options are \code{NULL} (choose
+#'   baseline as first factor level), a named list for each factor and a
+#'   corresponding baseline level, or \code{NA} for no baseline (approximating
+#'   the "marginal means" from Leeper et al. [2020]). For \code{marginal_ACE}, a
+#'   named list of two factors with a baseline level must be provided. For
+#'   \code{marginal_AMIE}, you can provide either a named list of two factors
+#'   with a baseline level or \code{NULL} to estimate all pairwise AMIE.
 #' @param vcov Calculate standard errors for the marginal effect. Not yet implemented for the AMIE.
 #' @param vcov.type NULL uses the standard errors associated with estimation.
 #'   Pass arguments from \code{vcov.FactorHet}'s "se.method" argument.
@@ -209,12 +213,15 @@ cjoint_plot <- function(object, baseline = NA){
 #' @details 
 #' 
 #' \bold{Choice of Baseline}: For ACE and AMIE, a choice of baseline is
-#' required. See Egami and Imai (2019) for details. For AME, a choice of
-#' baseline corresponds to a "standard" AME (see Egami and Imai 2019). The
-#' option \code{NULL} choses the first level of each factor. It can be manually
-#' specified using a named list. If a named list is provided, only AMEs for
-#' those named factors are calculated. This can be helpful if there are many
-#' factors. 
+#' required. This should be provided as a named list with two elements for two
+#' factors where each element of the list contains the baseline level. See the
+#' examples for usage and Egami and Imai (2019) for details on the ACE and AMIE.
+#'
+#' For AME, a choice of baseline corresponds to a "standard" AME (see Egami and
+#' Imai 2019). The option \code{NULL} choses the first level of each factor. It
+#' can be manually specified using a named list. If a named list is provided,
+#' only AMEs for those named factors are calculated. This can be helpful if
+#' there are many factors.
 #' 
 #' If \code{NA} is provided as the baseline level, the AME is calculated without
 #' a baseline; while this does not correspond to a "proper" AME, it is designed

@@ -43,7 +43,14 @@
 #'   information about the MBO, i.e. proposed values and objectives.}
 #'   \item{posterior_FactorHet: }{For a model with \code{K > 1}, visualize the
 #'   posterior for each observation and the posterior predictive implied by the
-#'   moderators.}
+#'   moderators. The output is a list of class \code{FactorHet_vis} that
+#'   contains the posterior and posterior-predictive probabilities in the
+#'   argument \code{"data"}. This data.frame has four columns: "group" for the
+#'   individual i's id, "post.predict" for the posterior predictive probability
+#'   (the probability of cluster membership if no data were observed), i.e.
+#'   \eqn{\pi_{ik}}, and the posterior probability (the probability of cluster
+#'   membership from the EM algorithm after observing the data), i.e.
+#'   \eqn{E[z_ik]}.}
 #'  }
 #' @export
 plot.FactorHet <- function(x, y = NULL, ...){
@@ -332,8 +339,8 @@ posterior_FactorHet <- function(object){
     scale_fill_manual(values = c('grey', 'red')) +
     theme(legend.position = 'bottom') +
     labs(col = '', fill = '')
-  print(vis_moderator)
-  output <- list(plot = vis_moderator, compare = compare_moderator, baseline = compare_baseline)
-  invisible(output)
+  output <- list(plot = vis_moderator, data = compare_moderator, baseline = compare_baseline)
+  class(output) <- 'FactorHet_vis'
+  return(output)
 }
 
