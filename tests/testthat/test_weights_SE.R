@@ -3,6 +3,7 @@ context("Test weights & SEs")
 test_that('Standard errors work with weights (K=1)', {
   
   N <- 200
+  
   dta <- data.frame(
     state = sample(state.name[1:4], N, replace = T),
     letter = sample(letters[1:3], N, replace = T)
