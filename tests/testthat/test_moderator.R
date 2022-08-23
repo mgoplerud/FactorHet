@@ -31,7 +31,7 @@ test_that('Confim working post regression functions (moderator)', {
   
   expect_s3_class(est_mod_eff, 'FactorHet_vis')
   expect_s3_class(est_mod_post, 'FactorHet_vis')
-  expect_s3_class(est_mod_by_posterior, 'FactorHet_vis')
+  expect_equivalent(sapply(est_mod_by_posterior, class), rep('FactorHet_vis', 4))
 
   expect_equivalent(est_mod_post$data$post.predict, 
                     est_simple$posterior$posterior_predictive$cluster_1)

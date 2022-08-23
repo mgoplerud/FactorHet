@@ -4,14 +4,16 @@ This package faciliates the estimation of heterogeneous effects in factorial (an
 
 The core method is a Bayesian regularized finite mixture-of-experts where moderators can affect an individual's probablity of cluster membership and a sparsity-inducing prior fuses together levels of each factor in each cluster while respecting ANOVA-style sum-to-zero constraints described in [Egami and Imai (2019)](https://imai.fas.harvard.edu/research/files/int.pdf). The posterior mode is found using an AECM algorithm with a number of techniques to accelerate convergence. Approximate quantification of uncertainty is provided by examining the Hessian of the log-posterior. Additional details are explained in the paper and (briefly) in the package documentation.
 
-The package can be installed from GitHub:
+The package can be installed from GitHub. Note, macOS users may need to ensure that XQuartz is installed; please see information from CRAN ([here](https://cran.r-project.org/bin/macosx/)) for more details.
 
 ```
 library(devtools)
 devtools::install_github('mgoplerud/FactorHet')
 ```
 
-There are two key functions for estimating the model: In most cases, one will prefer to use the `FactorHet_mbo` function to jointly (i) estimate the amount of regularization by minimizing a criterion such as the BIC using model-based optimization and (ii) estimate the final model. However, if one has a specific value of `\lambda`, one can fit the model for a fixed amount of regularization using `FactorHet`. A simple example is shown below:
+There are two key functions for estimating the model: In most cases, one will prefer to use the `FactorHet_mbo` function to jointly (i) estimate the amount of regularization by minimizing a criterion such as the BIC using model-based optimization and (ii) estimate the final model. However, if one has a specific value of `\lambda`, one can fit the model for a fixed amount of regularization using `FactorHet`. By default, `FactorHet_mbo` relies on the suggested `tgp` package that may also need to be installed.
+
+A simple example is shown below:
 
 ```
 fit_FH <- FactorHet_mbo(formula = y ~ factor_1 + factor_2 + factor_1 : factor_2, design = design, moderator = ~ moderator_1 + moderator_2)

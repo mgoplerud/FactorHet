@@ -37,7 +37,10 @@
 #'   should be done using \code{FactorHet_mbo}. This uses some number of
 #'   attempts to calibrate the amount of regularization by minimizing some
 #'   criterion (e.g. the BIC), and then fits a final model using the optimal
-#'   estimated regularization.
+#'   estimated regularization. Note that by default \code{FactorHet_mbo}
+#'   requires the suggested package \code{tgp} to be installed. Different
+#'   methods can be used; see the documentation for \link{FactorHet_mbo_control}
+#'   for more information.
 #'
 #'   Options for the model based optimization (mbo) can be set using
 #'   \code{FactorHet_mbo_control()}. Options for model estimation can be set
