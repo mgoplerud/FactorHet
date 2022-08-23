@@ -70,7 +70,7 @@ sum_mod_discrete <- function(object, type = c('bar', 'row', 'column')){
   
   if (type == 'row'){
     fmt_data <- split(flat_data[, c('plot_weight', 'cluster', 'value', 'variable')], 
-                      flat_data[, c('variable', 'value')])
+                      flat_data[, c('variable', 'value')], drop = TRUE)
     fmt_data <- do.call('rbind', lapply(fmt_data, FUN=function(i){
       agg_i <- aggregate(plot_weight ~ cluster, data = i, FUN = sum)
       agg_i$value <- unique(i$value)
@@ -80,7 +80,7 @@ sum_mod_discrete <- function(object, type = c('bar', 'row', 'column')){
     }))    
   }else if (type %in% c('column', 'bar')){
     fmt_data <- split(flat_data[, c('plot_weight', 'cluster', 'value', 'variable')], 
-                      flat_data[, c('cluster', 'variable')])
+                      flat_data[, c('cluster', 'variable')], drop = TRUE)
     fmt_data <- do.call('rbind', lapply(fmt_data, FUN=function(i){
       agg_i <- aggregate(plot_weight ~ value, data = i, FUN = sum)
       agg_i$cluster <- unique(i$cluster)

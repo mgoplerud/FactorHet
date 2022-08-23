@@ -9,13 +9,14 @@ test_that('Confim working post regression functions (moderator)', {
   
   dta$mod <- runif(nrow(dta), -1, 1)
   dta$mod2 <- sample(letters[1:5], nrow(dta), replace = T)
+  dta$mod3 <- sample(state.abb[1:5], nrow(dta), replace = T)
   dta$y1 <- rbinom(nrow(dta), 1, plogis(runif(5, -1 , 1)[match(dta$state, state.name[1:5])] + runif(5, -1, 1)[match(dta$letter, letters)]))
   dta$y2 <- rbinom(nrow(dta), 1, plogis(runif(5, -1 , 1)[match(dta$state, state.name[1:5])] + runif(5, -1, 1)[match(dta$letter, letters)]))
   
   dta$y <- ifelse(rbinom(nrow(dta), 1, plogis(dta$mod)) == 1, dta$y1, dta$y2)
   
   est_simple <- FactorHet(formula = y ~ state + letter, design = dta, 
-     moderator = ~ mod + mod2, 
+     moderator = ~ mod + mod2 + mod3, 
      initialize = FactorHet_init(short_EM_it = 5),
      control = FactorHet_control(
        prior_var_phi = 4, prior_var_beta = 5,
@@ -24,12 +25,14 @@ test_that('Confim working post regression functions (moderator)', {
   
   expect_gte(min(diff(logLik(est_simple, 'log_posterior_seq'))), -sqrt(.Machine$double.eps))
   
-  est_mod_eff <- tryCatch(moderator_AME(est_simple), error = function(e){NULL})
+  est_mod_eff <- moderator_AME(est_simple)
   est_mod_post <- tryCatch(posterior_FactorHet(est_simple), error = function(e){NULL})
+  est_mod_by_posterior <- tryCatch(posterior_by_moderators(est_simple, type_discrete = 'all'), error = function(e){NULL})
   
-  expect_false(is.null(est_mod_eff))  
-  expect_false(is.null(est_mod_post)) 
-  
+  expect_s3_class(est_mod_eff, 'FactorHet_vis')
+  expect_s3_class(est_mod_post, 'FactorHet_vis')
+  expect_s3_class(est_mod_by_posterior, 'FactorHet_vis')
+
   expect_equivalent(est_mod_post$data$post.predict, 
                     est_simple$posterior$posterior_predictive$cluster_1)
   expect_equivalent(est_mod_post$data$posterior, 
