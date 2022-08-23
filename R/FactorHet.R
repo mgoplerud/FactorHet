@@ -132,7 +132,7 @@ FactorHet <- function(formula, design, K, lambda,
   
   # Allow "short_EM" to be provided directly to
   # FactorHet_control as short-hand.
-  if (class(control$init_method) != 'list'){
+  if (!inherits(control$init_method, "list")){
     if (control$init_method == 'short_EM'){
       initialize$short_EM <- TRUE
     }else if (control$init_method %in% c('mclust', 'mclust_aug', 'spectral', 'kmeans')){

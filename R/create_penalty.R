@@ -60,7 +60,7 @@ create_penalty <- function(factor_levels, make_interactions,
 
   #Get the probability of assignment to treatment for each
   #pair of levels: List for independently randomized
-  if (class(treatment_probs) != 'list'){
+  if (!inherits(treatment_probs, "list")){
     stop('Non-independent arms not implemented.')
   }
   

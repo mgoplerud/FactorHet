@@ -819,9 +819,9 @@ EM_analysis <- function(formula, design, K, lambda, weights = NULL,
     beta <- simple_logit(y = y, X = X, iterations = 10, weights = weights,
       beta_method = 'cg', beta_cg_it = 10, prec_ridge = 1)
     beta <- matrix(as.vector(beta))  
-  }else if (class(control$init_method) == 'matrix'){
+  }else if (inherits(control$init_method, "matrix")){
     stop('init_method must be list or character.')
-  }else if (class(control$init_method) == 'list'){
+  }else if (inherits(control$init_method, "list")){
     valid_init <- all(c('pi', 'beta', 'group_E.prob', 'phi') %in% names(control$init_method))
     if (!valid_init){
       
@@ -835,7 +835,7 @@ EM_analysis <- function(formula, design, K, lambda, weights = NULL,
         stop('Groups found in init_method that are not in design.')
       }
       group_E.prob <- control$init_method$group_E.prob[match(unique_group, control$init_method$group_E.prob$group),]
-      if (class(group_E.prob$group) == 'factor'){
+      if (inherits(group_E.prob$group, "factor")){
         group_E.prob$group <- as.character(group_E.prob$group)
       }
       stopifnot(identical(group_E.prob$group, unique_group))
