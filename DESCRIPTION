@@ -1,18 +1,21 @@
 Package: FactorHet
-Title: Estimate Heterogeneous Effects in Factorial Experiments Using Clustering and Sparsity
-Version: 0.0.0.1
-Author: Max Goplerud <mgoplerud@pitt.edu>, Kosuke Imai <imai@harvard.edu>, Nicole E. Pashley <nicole.pashley@rutgers.edu>
-Maintainer: Max Goplerud <mgoplerud@pitt.edu>
-Description: This package faciliates the estimation of heterogeneous effects in factorial (and conjoint) models. Its details are fully described in Goplerud, Imai, and Pashley (2022) <doi:10.48550/ARXIV.2201.01357>. The methodology employs a Bayesian finite mixture of regularized logistic experts, where moderators can affect each observation's probability of cluster membership and a sparsity-inducing prior fuses together levels of each factor while respecting ANOVA-style sum-to-zero constraints.
+Title: Estimate Heterogeneous Effects in Factorial Experiments Using Grouping and Sparsity
+Version: 1.0.0
+Date: 2025-01-08
+Authors@R: c(
+  person("Max", "Goplerud", role = c("aut", "cre"), email = "mgoplerud@austin.utexas.edu"),
+  person(given=c("Nicole", "E."), "Pashley", role = c("aut"), email = "nicole.pashley@rutgers.edu"),
+  person("Kosuke", "Imai", role = c("aut"), email = "imai@harvard.edu"))
+Maintainer: Max Goplerud <mgoplerud@austin.utexas.edu>
+Description: Estimates heterogeneous effects in factorial (and conjoint) models. The methodology employs a Bayesian finite mixture of regularized logistic regressions, where moderators can affect each observation's probability of group membership and a sparsity-inducing prior fuses together levels of each factor while respecting ANOVA-style sum-to-zero constraints. Goplerud, Imai, and Pashley (2024) <doi:10.48550/ARXIV.2201.01357> provides full details.
 Depends: R (>= 3.4.0)
 License: GPL (>= 2)
 Encoding: UTF-8
-RoxygenNote: 7.1.2
-LinkingTo: Rcpp, RcppEigen
-Imports: Rcpp (>= 1.0.1), RcppEigen (>= 0.3.3.4.0), Matrix, 
-    rlang, ggplot2, reshape2, methods,
-    ParamHelpers, dplyr, mlr, mlrMBO, smoof, tictoc
+RoxygenNote: 7.3.2
+LinkingTo: Rcpp, RcppEigen (>= 0.3.3.4.0)
+Imports: Rcpp (>= 1.0.1), Matrix, 
+    ggplot2, methods, ParamHelpers, mlr, mlrMBO, smoof, lbfgs
 Suggests: 
-    FNN, RSpectra, mclust,
-    tgp, testthat,
+    FNN, RSpectra, mclust, ranger,
+    tgp, testthat, covr, tictoc
 LazyData: true

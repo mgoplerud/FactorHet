@@ -84,17 +84,19 @@ prepare_regression_data <- function(formula, design, moderator = NULL,
   W <- concom_W$W
   args_W <- concom_W$args_W
   ncol_W <- concom_W$ncol_W
+  W_full <- concom_W$W_full
   
   #From the design, get the level of each factor
-  factor_levels <- lapply(dplyr::select(.data = as.data.frame(design), !! factor_names), FUN=function(i){
+  # factor_names <- enquo(factor_names)
+  # factor_levels <- select(.data = as.data.frame(design), !! factor_names)
+  factor_levels <- lapply(as.data.frame(design)[,factor_names], FUN=function(i){
     if (any(class(i) == 'factor')){
       return(levels(i))
     }else{
       return(sort(unique(i)))
     }
   })
-  
-  ordered_factors <- sapply(dplyr::select(.data = as.data.frame(design), !! factor_names), FUN=function(i){
+  ordered_factors <- sapply(as.data.frame(design)[,factor_names], FUN=function(i){
     is.ordered(i)
   })
   
@@ -113,6 +115,8 @@ prepare_regression_data <- function(formula, design, moderator = NULL,
   penalty_for_regression <- rare_output$penalty_for_regression
   rare_col <- rare_output$rare
   rare_fmt_col <- rare_output$fmt_rare
+  rare_unstd_col <- rare_output$unstd_rare
+  
   rm(rare_output)
   
   if (length(factor_names) > 1){
@@ -130,6 +134,7 @@ prepare_regression_data <- function(formula, design, moderator = NULL,
         add_restrictions <- c(add_restrictions, ind_restrict)
       }
     }
+    
     # Are there any additional restrictions?
     new_restrictions <- setdiff(add_restrictions, rare_fmt_col)
     if (length(new_restrictions) > 0){
@@ -150,12 +155,12 @@ prepare_regression_data <- function(formula, design, moderator = NULL,
   
   
   #Clip any small values below 1e-15 to be zero
-  clip_tiny <- floor(-log(.Machine$double.eps)/log(10))
-  if (clip_tiny < 15){
-    clip_tiny <- 15
+  clip_tiny <- floor(-1/2*log(.Machine$double.eps)/log(10))
+  if (clip_tiny < 7){
+    clip_tiny <- 7
   }
 
-  basis_M <- drop0(zapsmall(basis_M, clip_tiny))
+  basis_M <- drop0(absolute_zap(basis_M, clip_tiny))
   #If choice order provided, DO FORCED CHOICE
   if (!is.null(choice_order)){
     
@@ -184,10 +189,7 @@ prepare_regression_data <- function(formula, design, moderator = NULL,
     single_intercept <- use_forced_choice
   }
   group_mapping <- sparseMatrix(i = 1:nrow(X), j = match(group, unique_group), x = 1)
-  
 
-  
-  
   data_output <- mget(ls())
   class(data_output) <- 'FactorHet_data'
   return(data_output)
@@ -198,25 +200,31 @@ prepare_deterministic_init <- function(data, K, method, iterations = NULL){
   if (!inherits(data, 'FactorHet_data')){
     stop('prepare_deterministic_init needs an object from "prepare_regression_data".')
   }
+  
+  main_X <- data$X
+  levels_X <- c('(Intercept)', unlist(mapply(names(data$factor_levels), data$factor_levels, SIMPLIFY = FALSE, FUN=function(i,j){paste0(i, '(', j, ')')})))
+  if (length(setdiff(levels_X, colnames(main_X))) != 0){
+    stop('Missing levels in X?')
+  }
+  main_X <- main_X[ , colnames(main_X) %in% levels_X]
+  
   if (K == 1){
     out <- matrix(1, nrow = length(data$unique_group))
+  }else if (method == 'forest'){
+    out <- forest_init(y = data$y, X = main_X, 
+        G = data$group_mapping, W = data$W, K = K)
   }else if (method == 'spectral'){
     out <- spectral_init(data$W, K)
   }else if (method == 'mclust'){
     out <- mclust_init(data$W, K)
   }else if (grepl(method, pattern='^mm')){
     
-    main_X <- data$X
-    levels_X <- c('(Intercept)', unlist(mapply(names(data$factor_levels), data$factor_levels, SIMPLIFY = FALSE, FUN=function(i,j){paste0(i, '(', j, ')')})))
-    if (length(setdiff(levels_X, colnames(main_X))) != 0){
-      stop('Missing levels in X?')
-    }
-    main_X <- main_X[ , colnames(main_X) %in% levels_X]
-
     if (grepl(method, pattern='^mm_spectral')){
       mm_method <- 'spectral'
     }else if (grepl(method, pattern='^mm_mclust')){
       mm_method <- 'mclust'
+    }else if (grepl(method, pattern='^mm_forest')){
+      mm_method <- 'forest'
     }else{stop('mm_ must have "spectral" or "mclust" after')}
     
     out <- murphy_murphy_initialize(y = as.numeric(data$y), X = main_X, W = data$W, K = K,
@@ -235,7 +243,12 @@ prepare_deterministic_init <- function(data, K, method, iterations = NULL){
 #' @importFrom stats sd kmeans
 spectral_init <- function(W, K){
   if (ncol(W) == 1 & all(W[,1] == 1)){
-    stop('Spectral initialization with no moderators is not permitted.')
+    message('mclust initialization requires moderators. Using "random_member" instead.')
+    group_E.prob <- sparseMatrix(
+      i = 1:nrow(W), j = sample(1:K, nrow(W), replace = TRUE),
+      x = 1
+    )
+    return(group_E.prob)
   }
   if (!requireNamespace('FNN', quietly = TRUE) & !requireNamespace('RSpectra', quietly = TRUE)){
     stop('Spectral initialization requires "FNN" and "RSpectra" installed.')
@@ -253,10 +266,26 @@ spectral_init <- function(W, K){
   cov_W <- eigen(cov_W)
   scale_W <- scale_W %*% (cov_W$vectors) %*% diag(x = 1/sqrt(cov_W$values))
   
-  knn_W <- FNN::get.knn(scale_W, k=10)
-  knn_W <- merge(reshape2::melt(knn_W$nn.index, value.name = 'index'),
-                     reshape2::melt(knn_W$nn.dist, value.name = 'dist'), 
-                     by = c('Var1', 'Var2'))
+  check_FNN <- requireNamespace('FNN', quietly = TRUE)
+  if (!check_FNN){
+    stop('spectral initialization requires FNN')
+  }else{
+    knn_W <- FNN::get.knn(scale_W, k=10)
+  }
+
+  term_1 <- data.frame(expand.grid(Var1 = 1:nrow(knn_W$nn.index), 
+    Var2 = 1:ncol(knn_W$nn.index), stringsAsFactors = FALSE))
+  term_1$index <- as.vector(knn_W$nn.index)
+
+  term_2 <- data.frame(expand.grid(Var1 = 1:nrow(knn_W$nn.dist), 
+    Var2 = 1:ncol(knn_W$nn.dist), stringsAsFactors = FALSE))
+  term_2$dist <- as.vector(knn_W$nn.dist)
+
+  knn_W <- merge(term_1, term_2, by = c('Var1', 'Var2'))
+  # Old version that uses reshape2
+  # aaa <- merge(melt(knn_W$nn.index, value.name = 'index'),
+  #                    melt(knn_W$nn.dist, value.name = 'dist'), 
+  #                    by = c('Var1', 'Var2'))
   graph_W <- sparseMatrix(i = knn_W$Var1, j = knn_W$index, x = 1, dims = c(nrow(scale_W), nrow(W)))
   graph_W <- graph_W + t(graph_W)
   graph_W@x[graph_W@x != 2] <- 0
@@ -314,15 +343,50 @@ spectral_init <- function(W, K){
 }
 
 mclust_init <- function(W, K){
+  
+  if (ncol(W) == 1 & all(W[,1] == 1)){
+    message('mclust initialization requires moderators. Using "random_member" instead.')
+    group_E.prob <- sparseMatrix(
+      i = 1:nrow(W), j = sample(1:K, nrow(W), replace = TRUE),
+      x = 1
+    )
+    return(group_E.prob)
+  }
+  
   if (requireNamespace('mclust', quietly = TRUE)){
     hcVVV <- mclust::hcVVV
-    classif <- as.vector(mclust::hclass(mclust::hc(data = W, use = "SVD"), G = K))
+    fit_hc <- mclust::hc(data = W, modelName = 'VVV', use = 'SPH')
+    classif <- as.vector(mclust::hclass(fit_hc, G = K))
     group_E.prob <- sparseMatrix(i = 1:nrow(W), j = classif, x = 1)
     group_E.prob <- as.matrix(group_E.prob)
   }else{
     stop('"mclust" initialization requires "mclust" installed.')
   }
+  
   return(group_E.prob)
+}
+
+forest_init <- function(y, X, G, W, K){
+  use_ranger <- requireNamespace('ranger', quietly = TRUE)
+  if (use_ranger){
+    big_W <- as.matrix(G %*% W)
+    cat('Starting Random Forests\n')
+    run_cf <- sapply(1:ncol(X), FUN=function(i){
+      cat('|')
+      est_ranger <- ranger::ranger(factor(y) ~ ., data = data.frame(cbind(big_W, treat = X[,i])), probability = T)
+      pred_1 <- predict(est_ranger, data = data.frame(cbind(W, treat = 1)))$prediction[,"1"]
+      pred_0 <- predict(est_ranger, data = data.frame(cbind(W, treat = -1)))$prediction[,"1"]
+      return(pred_1 - pred_0)
+    })
+    cat('\n')
+    colnames(run_cf) <- colnames(X)
+    cat('Performing K-Means on Univariate Heterogeneous Effects\n')
+    fit_km <- kmeans(x = run_cf, centers = K, iter.max = 150, nstart = 2000)
+    cat('Completed Forest Initialization\n')
+    assign <- as.matrix(sparseMatrix(i = 1:nrow(W), j = fit_km$cluster, x = 1))
+    return(assign)
+    # return(list(assign = assign, km = fit_km, causal = run_cf))
+  }else{stop('"ranger" must be installed for "forest" initialization.')}
 }
 
 # Initialization Based on Murphy/Murphy (2020); see the appendix of Goplerud et
@@ -336,20 +400,27 @@ murphy_murphy_initialize <- function(y, X, W, K, group_mapping, weights,
   }
   if (K == 1){stop('No initalization needed or permitted if K = 1')}
   # Step 1: Cluster based on moderators 
-  if (method == 'mclust'){
+  if (method == 'forest'){
+    classif <- forest_init(y = y, X = X, K = K, G = group_mapping, W = W) %*% 1:K
+  }else if (method == 'mclust'){
     if (requireNamespace('mclust', quietly = TRUE)){
       if (ncol(W) == 1 & all(W[,1] == 1)){
+        message('mclust initialization requires moderators. Using "random_member" instead.')
         classif <- sample(1:K, nrow(W), replace = T)
       }else{
-        hcVVV <- mclust::hcVVV
-        classif <- as.vector(mclust::hclass(mclust::hc(data = W, use = "SVD"), G = K))
+        classif <- mclust_init(W, K) %*% 1:K
       }
     }else{
       stop('"mclust" initialization requires "mclust" installed.')
     }
   }else if (method == 'spectral'){
-    classif <- spectral_init(W, K)
-    classif <- rowSums(classif %*% Diagonal(x = 1:K))
+    if (ncol(W) == 1 & all(W[,1] == 1)){
+      message('spectral initialization requires moderators. Using "random_member" instead.')
+      classif <- sample(1:K, nrow(W), replace = T)
+    }else{
+      classif <- spectral_init(W, K)
+      classif <- rowSums(classif %*% Diagonal(x = 1:K))
+    }
   }else{stop('Invalid method to Murphy/Murphy')}
   init_classif <- classif
   

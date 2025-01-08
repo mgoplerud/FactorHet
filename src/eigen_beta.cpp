@@ -16,12 +16,12 @@ Eigen::MatrixXd cpp_beta(
     const Eigen::Map<Eigen::MatrixXd> E_omega,
     const Eigen::Map<Eigen::MatrixXd> obs_E_prob
 ){
-  
+
   Eigen::MatrixXd new_beta(X.cols(), K);
-  
   Eigen::MatrixXd adj_X = X.adjoint();
   Eigen::VectorXd adj_y = weights.array() * (y.array() - 0.5);
   
+  // Loop over clusters
   for (int k = 0; k < K; k++){
     
     Eigen::VectorXd s_ik = obs_E_prob.col(k);
@@ -34,7 +34,9 @@ Eigen::MatrixXd cpp_beta(
     
     new_beta.col(k) = outer_X.llt().solve(adj_X * s_ik);
   }
+  
   return new_beta;
+  
 }
 
 // Direct Solution Using Cpp
@@ -76,6 +78,7 @@ List cg_custom(
       Rcpp::stop("weights must have either 0 cols or same dimensionality as X");
     }
   }
+  
   int p_X = X.cols();
   
   Eigen::VectorXd k_it(K);
@@ -84,8 +87,7 @@ List cg_custom(
   Eigen::MatrixXd new_beta(p_X, K);
   
   for (int k = 0; k < K; k++){
-    //Rcout << "A " << "\n";
-    
+
     Eigen::SparseMatrix<double> ridge = list_ridge[k];
     
     Eigen::VectorXd sqrt_omega_k = omega.col(k).cwiseSqrt();
@@ -99,12 +101,12 @@ List cg_custom(
     }
     Eigen::SparseMatrix<double> adj_X = sparse_diag(sqrt_omega_k) * X;
     
-    // Rcout << "B" << "\n";
-    
     // If low dimensional problem, just solve directly
     if (p_X <= low_dimension){
-      Eigen::MatrixXd outer_X = adj_X.adjoint() * adj_X + ridge;
-      new_beta.col(k) = outer_X.llt().solve(adj_X.adjoint() * adj_s);
+      // Eigen::MatrixXd outer_X = adj_X.adjoint() * adj_X + ridge;
+      // new_beta.col(k) = outer_X.llt().solve(adj_X.adjoint() * adj_s);
+      Eigen::SimplicialLLT<Eigen::SparseMatrix<double> > decomp(adj_X.adjoint() * adj_X + ridge);
+      new_beta.col(k) = decomp.solve(adj_X.adjoint() * adj_s);
       k_it(k) = 0;
       k_error(k) = 0;
       k_convg(k) = 2;
@@ -122,8 +124,6 @@ List cg_custom(
 
     Eigen::VectorXd residual = adj_s - adj_X * beta;
     
-    // Rcout << "C" << "\n";
-    
     double rhsNorm2 = (adj_X.adjoint() * adj_s).squaredNorm();
     Eigen::VectorXd normal_residual = adj_X.adjoint() * residual - ridge * beta;
     
@@ -137,10 +137,12 @@ List cg_custom(
     if (it_max == 0){
       internal_cg_it = p_X;
     }else{
-      internal_cg_it = it_max;
+      if (p_X < it_max){
+        internal_cg_it = p_X;
+      }else{
+        internal_cg_it = it_max;
+      }
     }
-    
-    // Rcout << "D" << "\n";
     
     // Do conjugate gradient with normal equation
     // (X^T O X + R) beta = X^T y but never form X^T O X
@@ -176,8 +178,6 @@ List cg_custom(
       
       it++;
     }
-
-    // Rcout << "E" << "\n";
     
     new_beta.col(k) = beta;
     k_it(k) = it;

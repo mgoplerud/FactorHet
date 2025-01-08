@@ -1,5 +1,20 @@
 context('Check for initialization and packaging data')
 
+if (isTRUE(as.logical(Sys.getenv("CI")))){
+  # If on CI
+  NITER <- 2
+  env_test <- "CI"
+}else if (!identical(Sys.getenv("NOT_CRAN"), "true")){
+  # If on CRAN
+  NITER <- 2
+  env_test <- "CRAN"
+  set.seed(16)
+}else{
+  # If on local machine
+  NITER <- 2000
+  env_test <- 'local'
+}
+
 test_that('Check that packaged / non-packaged agree', {
   
   dta <- data.frame(
@@ -47,6 +62,15 @@ test_that('Check that packaged / non-packaged agree', {
   est_2$internal_parameters$control$init_method <- NULL
   est_3$internal_parameters$timing <- NULL
   est_3$internal_parameters$control$init_method <- NULL
+  
+  est_1$internal_parameters$refit$make_X_refit$add_col <- NULL
+  est_2$internal_parameters$refit$make_X_refit$add_col <- NULL
+  est_3$internal_parameters$refit$make_X_refit$add_col <- NULL
+
+  est_1$internal_parameters$control$lambda_scale <- NULL
+  est_2$internal_parameters$control$lambda_scale <- NULL
+  est_3$internal_parameters$control$lambda_scale <- NULL
+  
   # Equivalent except for timing
   expect_true(all.equal(est_1, est_2))
   expect_true(all.equal(est_1, est_3))

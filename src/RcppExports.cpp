@@ -6,6 +6,11 @@
 
 using namespace Rcpp;
 
+#ifdef RCPP_USE_GLOBAL_ROSTREAM
+Rcpp::Rostream<true>&  Rcpp::Rcout = Rcpp::Rcpp_cout_get();
+Rcpp::Rostream<false>& Rcpp::Rcerr = Rcpp::Rcpp_cerr_get();
+#endif
+
 // cpp_beta
 Eigen::MatrixXd cpp_beta(const int K, const Eigen::MappedSparseMatrix<double> X, const Rcpp::List E_ridge, const Eigen::Map<Eigen::ArrayXd> y, const Eigen::Map<Eigen::ArrayXd> weights, const Eigen::Map<Eigen::MatrixXd> E_omega, const Eigen::Map<Eigen::MatrixXd> obs_E_prob);
 RcppExport SEXP _FactorHet_cpp_beta(SEXP KSEXP, SEXP XSEXP, SEXP E_ridgeSEXP, SEXP ySEXP, SEXP weightsSEXP, SEXP E_omegaSEXP, SEXP obs_E_probSEXP) {
@@ -124,8 +129,8 @@ BEGIN_RCPP
 END_RCPP
 }
 // cpp_gradient_phi
-Eigen::VectorXd cpp_gradient_phi(const Eigen::Map<Eigen::VectorXd> par, const int K, const Eigen::Map<Eigen::VectorXd> norm_weights, const Eigen::Map<Eigen::VectorXd> weights_W, const Eigen::Map<Eigen::MatrixXd> group_E_prob, const Eigen::Map<Eigen::MatrixXd> W, const Eigen::Map<Eigen::MatrixXd> ridge_penalty, const double gamma, const double rank_F, const double power_pi, const Eigen::ArrayXd b_r, const double lambda, Nullable<NumericVector> sampling_weights);
-RcppExport SEXP _FactorHet_cpp_gradient_phi(SEXP parSEXP, SEXP KSEXP, SEXP norm_weightsSEXP, SEXP weights_WSEXP, SEXP group_E_probSEXP, SEXP WSEXP, SEXP ridge_penaltySEXP, SEXP gammaSEXP, SEXP rank_FSEXP, SEXP power_piSEXP, SEXP b_rSEXP, SEXP lambdaSEXP, SEXP sampling_weightsSEXP) {
+Eigen::VectorXd cpp_gradient_phi(const Eigen::Map<Eigen::VectorXd> par, const int K, const Eigen::Map<Eigen::VectorXd> norm_weights, const Eigen::Map<Eigen::VectorXd> weights_W, const Eigen::Map<Eigen::MatrixXd> group_E_prob, const Eigen::Map<Eigen::MatrixXd> W, const Eigen::Map<Eigen::MatrixXd> ridge_penalty, const double gamma, const double rank_F, const double power_pi, const Eigen::Map<Eigen::ArrayXd> b_r, const double lambda);
+RcppExport SEXP _FactorHet_cpp_gradient_phi(SEXP parSEXP, SEXP KSEXP, SEXP norm_weightsSEXP, SEXP weights_WSEXP, SEXP group_E_probSEXP, SEXP WSEXP, SEXP ridge_penaltySEXP, SEXP gammaSEXP, SEXP rank_FSEXP, SEXP power_piSEXP, SEXP b_rSEXP, SEXP lambdaSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -139,15 +144,14 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< const double >::type gamma(gammaSEXP);
     Rcpp::traits::input_parameter< const double >::type rank_F(rank_FSEXP);
     Rcpp::traits::input_parameter< const double >::type power_pi(power_piSEXP);
-    Rcpp::traits::input_parameter< const Eigen::ArrayXd >::type b_r(b_rSEXP);
+    Rcpp::traits::input_parameter< const Eigen::Map<Eigen::ArrayXd> >::type b_r(b_rSEXP);
     Rcpp::traits::input_parameter< const double >::type lambda(lambdaSEXP);
-    Rcpp::traits::input_parameter< Nullable<NumericVector> >::type sampling_weights(sampling_weightsSEXP);
-    rcpp_result_gen = Rcpp::wrap(cpp_gradient_phi(par, K, norm_weights, weights_W, group_E_prob, W, ridge_penalty, gamma, rank_F, power_pi, b_r, lambda, sampling_weights));
+    rcpp_result_gen = Rcpp::wrap(cpp_gradient_phi(par, K, norm_weights, weights_W, group_E_prob, W, ridge_penalty, gamma, rank_F, power_pi, b_r, lambda));
     return rcpp_result_gen;
 END_RCPP
 }
 // cpp_obj_phi
-double cpp_obj_phi(const Eigen::Map<Eigen::VectorXd> par, const int K, const Eigen::Map<Eigen::VectorXd> norm_weights, const Eigen::Map<Eigen::VectorXd> weights_W, const Eigen::Map<Eigen::MatrixXd> W, const Eigen::Map<Eigen::MatrixXd> group_E_prob, const Eigen::Map<Eigen::MatrixXd> ridge_penalty, const double gamma, const double rank_F, const double power_pi, const Eigen::ArrayXd b_r, const double lambda);
+double cpp_obj_phi(const Eigen::Map<Eigen::VectorXd> par, const int K, const Eigen::Map<Eigen::VectorXd> norm_weights, const Eigen::Map<Eigen::VectorXd> weights_W, const Eigen::Map<Eigen::MatrixXd> W, const Eigen::Map<Eigen::MatrixXd> group_E_prob, const Eigen::Map<Eigen::MatrixXd> ridge_penalty, const double gamma, const double rank_F, const double power_pi, const Eigen::Map<Eigen::ArrayXd> b_r, const double lambda);
 RcppExport SEXP _FactorHet_cpp_obj_phi(SEXP parSEXP, SEXP KSEXP, SEXP norm_weightsSEXP, SEXP weights_WSEXP, SEXP WSEXP, SEXP group_E_probSEXP, SEXP ridge_penaltySEXP, SEXP gammaSEXP, SEXP rank_FSEXP, SEXP power_piSEXP, SEXP b_rSEXP, SEXP lambdaSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
@@ -162,7 +166,7 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< const double >::type gamma(gammaSEXP);
     Rcpp::traits::input_parameter< const double >::type rank_F(rank_FSEXP);
     Rcpp::traits::input_parameter< const double >::type power_pi(power_piSEXP);
-    Rcpp::traits::input_parameter< const Eigen::ArrayXd >::type b_r(b_rSEXP);
+    Rcpp::traits::input_parameter< const Eigen::Map<Eigen::ArrayXd> >::type b_r(b_rSEXP);
     Rcpp::traits::input_parameter< const double >::type lambda(lambdaSEXP);
     rcpp_result_gen = Rcpp::wrap(cpp_obj_phi(par, K, norm_weights, weights_W, W, group_E_prob, ridge_penalty, gamma, rank_F, power_pi, b_r, lambda));
     return rcpp_result_gen;
@@ -234,7 +238,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"_FactorHet_trace_AinvB", (DL_FUNC) &_FactorHet_trace_AinvB, 2},
     {"_FactorHet_fast_sparse_df", (DL_FUNC) &_FactorHet_fast_sparse_df, 2},
     {"_FactorHet_cpp_moderator_deriv", (DL_FUNC) &_FactorHet_cpp_moderator_deriv, 6},
-    {"_FactorHet_cpp_gradient_phi", (DL_FUNC) &_FactorHet_cpp_gradient_phi, 13},
+    {"_FactorHet_cpp_gradient_phi", (DL_FUNC) &_FactorHet_cpp_gradient_phi, 12},
     {"_FactorHet_cpp_obj_phi", (DL_FUNC) &_FactorHet_cpp_obj_phi, 12},
     {"_FactorHet_calculate_nullspace_basis", (DL_FUNC) &_FactorHet_calculate_nullspace_basis, 1},
     {"_FactorHet_rank_sparse", (DL_FUNC) &_FactorHet_rank_sparse, 1},

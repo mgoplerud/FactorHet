@@ -113,10 +113,10 @@ Eigen::VectorXd cpp_gradient_phi(
     const double gamma, 
     const double rank_F, 
     const double power_pi, 
-    const Eigen::ArrayXd b_r, 
-    const double lambda,
-    Nullable<NumericVector> sampling_weights = R_NilValue
+    const Eigen::Map<Eigen::ArrayXd> b_r, 
+    const double lambda
 ){
+  
   int size_W = W.cols();
   int n_W = W.rows();
   
@@ -187,7 +187,7 @@ Eigen::VectorXd cpp_gradient_phi(
   }else{
     output = grad_ll_phi + grad_reg_phi;
   }
-  Eigen::Map<Eigen::VectorXd> flat_output(output.data(), output.size());
+  Eigen::Map<const Eigen::VectorXd> flat_output(output.data(), output.size(), 1);
 
   return flat_output;
 }
@@ -204,10 +204,9 @@ double cpp_obj_phi(
     const double gamma, 
     const double rank_F, 
     const double power_pi, 
-    const Eigen::ArrayXd b_r, 
+    const Eigen::Map<Eigen::ArrayXd> b_r, 
     const double lambda
 ){
-  // Nullable<Eigen::VectorXd> sampling_weights = R_NilValue, 
   int size_W = W.cols();
   int n_W = W.rows();
   

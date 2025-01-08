@@ -3,16 +3,16 @@
 \encoding{UTF-8}
 \name{FactorHet_init}
 \alias{FactorHet_init}
-\title{Arguments for Initializing FactorHet}
+\title{Arguments for initializing FactorHet}
 \usage{
 FactorHet_init(
   short_EM = FALSE,
   short_EM_it = 40,
   short_EM_init = "random_member",
-  short_EM_pi = 50,
+  short_EM_pi = NULL,
   force_rep = FALSE,
   verbose = FALSE,
-  short_EM_beta_method = "cg",
+  short_EM_beta_method = "cpp",
   short_EM_cg_it = 10,
   nrep = 5,
   debug_repeat = F,
@@ -21,40 +21,58 @@ FactorHet_init(
 )
 }
 \arguments{
-\item{short_EM}{Logical. \code{TRUE} indicates a "short EM" should be
-followed. That is, run multiple short runs of EM with random
+\item{short_EM}{A logical value indicating whether "short EM" should be used.
+The default value is \code{FALSE}. \code{TRUE} indicates a "short EM"
+should be followed. That is, run multiple short runs of EM with random
 initializations and then proceed with the best for full initialization.
-See, e.g., Biernacki et al. (2003) for more discussion.}
+Biernacki et al. (2003) provides more discussion. If
+\code{\link{FactorHet_control}} has \code{init_method = "short_EM"}, this
+will override this setting.}
 
-\item{short_EM_it}{Number of iterations to use for the short EM.}
+\item{short_EM_it}{A numerical value of the number of iterations to use for
+each "short" run of the EM algorithm. The default is 40.}
 
-\item{short_EM_init}{Initialization procedure for "short EM". Must be some
-non-deterministic procedure that is valid in \code{FactorHet_control}.}
+\item{short_EM_init}{An argument that sets the initialization procedure for
+"short EM". It must be some non-deterministic procedure that is valid in
+\code{\link{FactorHet_control}}. The default is \code{"random_member".}}
 
-\item{short_EM_pi}{Number of iterations to use to update moderators.}
+\item{short_EM_pi}{An argument for the maximum number of iterations for the
+moderator updates to use for each "short" run of the EM algorithm. The
+default is \code{NULL}.}
 
-\item{force_rep}{Force repeated restarts when K = 1; only used for debugging.}
+\item{force_rep}{A logical value for whether to repeat the algorithm if
+\code{K=1}. The default is \code{FALSE} and it should be used only for
+debugging.}
 
-\item{verbose}{Print progress of estimation.}
+\item{verbose}{A logical value to print more information about the progress
+of each iteration. The default is \code{FALSE}.}
 
-\item{short_EM_beta_method}{Method to update betas.}
+\item{short_EM_beta_method}{An argument for the update method for \eqn{\beta}
+to use for each "short" run of the EM algorithm. The default is
+\code{"cpp"}.}
 
-\item{short_EM_cg_it}{Number of iterations for conjugate gradient.}
+\item{short_EM_cg_it}{An argument for the number of conjugate gradient
+iterations to use if \code{short_EM_beta_method = "cg"}.}
 
-\item{nrep}{How many random initializations/short EMs should be used?}
+\item{nrep}{An integer value of the number of random iterations or runs of
+"short EM" should be used. The default value is 5.}
 
-\item{debug_repeat}{Debug the repeated option.}
+\item{debug_repeat}{A logical value for whether to debug the repeated runs.
+The default is \code{FALSE}.}
 
-\item{plot_repeat}{Plot the trajectory of the log-posterior for each run}
+\item{plot_repeat}{A logical value for whether to plot the trajectory of the
+log-posterior for each run. The default is \code{FALSE}.}
 
-\item{return_all}{Return all models.}
+\item{return_all}{A logical value for whether to return all repetitions of
+the model versus the one with the highest log-posterior. The default is
+\code{FALSE}.}
 }
 \description{
-A set of arguments to affect the initalization of FactorHet. Use
-\link{FactorHet_control} to set arguments around estimation.
-\link{FactorHet_mbo} ignores many of these arguments as it uses a single
-fixed initialization for each proposed regularization value. All arguments
-have default values.
+A set of arguments that govern the initialization of \code{\link{FactorHet}}.
+Use \code{\link{FactorHet_control}} to set arguments around estimation.
+\code{\link{FactorHet_mbo}} ignores many of these arguments as it uses a
+single fixed initialization set by \code{\link{FactorHet_mbo_control}}. All
+arguments have default values.
 }
 \examples{
 str(FactorHet_init())

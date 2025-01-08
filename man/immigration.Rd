@@ -3,43 +3,40 @@
 \docType{data}
 \name{immigration}
 \alias{immigration}
-\title{Small Dataset on Immigration Preferences}
+\title{Small dataset on immigration preferences}
 \format{
 A data frame with 1000 rows and 10 variables:
 \describe{
   \item{CaseID}{Unique identifier for respondent.}
-  \item{contest_no}{Task number (1-5) for each respondent}
-  \item{choice_id}{Identifier for the profile shown, i.e. was it the "left"
+  \item{contest_no}{Task number (1-5) for each respondent.}
+  \item{choice_id}{Identifier for the profile shown, i.e., was it the "left"
   or "right" profile.}
   \item{Chosen_Immigrant}{Immigrant profile chosen by respondent.}
-  \item{Country}{Immigrant's country of origin}
-  \item{Ed}{Immigrant's education level}
-  \item{Plans}{Immigrant's employment plans after arrival}
-  \item{Gender}{Immigrant's gender}
+  \item{Country}{Immigrant's country of origin.}
+  \item{Ed}{Immigrant's education level.}
+  \item{Plans}{Immigrant's employment plans after arrival.}
+  \item{Gender}{Immigrant's gender.}
   \item{party_ID}{\bold{Respondent's} party identification.}
-  \item{census_div}{Level of immigration in \bold{respondent's} ZIP code}
+  \item{census_div}{Level of immigration in \bold{respondent's} ZIP code.}
 }
 }
 \source{
-\url{https://dataverse.harvard.edu/dataset.xhtml?persistentId=doi:10.7910/DVN/25505}
+\doi{10.7910/DVN/25505}
 }
 \usage{
 immigration
 }
 \description{
 An example dataset of 100 randomly chosen respondents from the replication
-data in Hainmuller and Hopkins (2015). Only a small selection of the factors
+data in Hainmueller and Hopkins (2015). Only a small selection of the factors
 and moderators in the original experiment are included in this example
 dataset. The full data can be downloaded from the replication archive in
-"Source" below. More details on all variables can be found in the original
-paper.
-}
-\details{
-The replication data for Goplerud et al. (2022) provides code to process and
-analyze the original data using \code{FactorHet}.
+"Source" below. The original paper provides more details on all variables.
+The replication data for Goplerud et al. (2025) provides code to process and
+analyze the original data using \code{\link{FactorHet}}.
 }
 \references{
-Goplerud, Max, Kosuke Imai, and Nicole E. Pashley. 2022. "Estimating
+Goplerud, Max, Kosuke Imai, and Nicole E. Pashley. 2025. "Estimating
 Heterogeneous Causal Effects of High-Dimensional Treatments: Application to
 Conjoint Analysis." arxiv preprint: \url{https://arxiv.org/abs/2201.01357}
 

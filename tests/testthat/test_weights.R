@@ -1,42 +1,52 @@
 context("Check Weights")
 
+if (isTRUE(as.logical(Sys.getenv("CI")))){
+  # If on CI
+  NITER <- 2
+  env_test <- "CI"
+}else if (!identical(Sys.getenv("NOT_CRAN"), "true")){
+  # If on CRAN
+  NITER <- 2
+  env_test <- "CRAN"
+  set.seed(15)
+}else{
+  # If on local machine
+  NITER <- 2000
+  env_test <- 'local'
+}
+
 test_that('Weights for K = 2, conjoint', {
   
-  N <- 50
   dta <- data.frame(
-    state = sample(state.name[1:4], N, replace = T),
-    letter = sample(letters[1:3], N, replace = T)
+    state = sample(state.name[1:4], 1000, replace = T),
+    letter = sample(letters[1:3], 1000, replace = T)
   )
 
-  dta$group <- rep(sample(1:(N/4), N/2, replace = T), each = 2)
-  dta$task <- rep(1:(N/2), each = 2)
-  dta$prof <- as.vector(sapply(1:(N/2), FUN=function(i){c('l', 'r')[sample(2)]}))
-  dta$y <- as.vector(sapply(1:(N/2), FUN=function(i){sample(0:1)}))
-  dta$mod <- runif((N/2), -1, 1)[dta$group]
+  dta$group <- rep(sample(1:250, 500, replace = T), each = 2)
+  dta$task <- rep(1:500, each = 2)
+  dta$prof <- as.vector(sapply(1:500, FUN=function(i){c('l', 'r')[sample(2)]}))
+  dta$y <- as.vector(sapply(1:500, FUN=function(i){sample(0:1)}))
+  dta$mod <- runif(500, -1, 1)[dta$group]
   
   weights <- abs(rcauchy(nrow(dta)))
+  weights[median(weights) * 500 < weights] <- median(weights) * 500
   
   est_simple <- expect_error(
     FactorHet(formula = y ~ state + letter, design = dta, K = 2, 
-      lambda = 1e-2, moderator = ~ mod, 
-      weights = ~ weights,
-      control = FactorHet_control(iterations = 1),
-      init = FactorHet_init(short_EM_it = 1, nrep = 1),
-      group = ~ group, task = ~ task, choice_order = ~ prof),
-    regex = 'Weights.*identi')
+                          lambda = 1e-2, moderator = ~ mod, 
+                          weights = ~ weights,
+                          group = ~ group, task = ~ task, choice_order = ~ prof),
+    message = 'weights')
   
-  dta$weights <- as.vector(sapply(1:(N/2), FUN=function(i){rep(abs(rcauchy(1)), 2)}))
-  
+  dta$weights <- as.vector(sapply(1:500, FUN=function(i){rep(abs(rcauchy(1)), 2)}))
   
   est_simple <- expect_error(FactorHet(formula = y ~ state + letter, design = dta, K = 2, 
     lambda = 1e-2, moderator = ~ mod, 
-    weights = ~ weights, 
-    control = FactorHet_control(iterations = 1),
-    init = FactorHet_init(short_EM_it = 1, nrep = 1),
+    weights = ~ weights,
     group = ~ group, task = ~ task, choice_order = ~ prof),
-    regex = 'weights are not')
-
-  wgt <- abs(rcauchy(n = (N/2)))
+    message = 'weights')
+  
+  wgt <- abs(rcauchy(n = 500))
   dta$outcome_weights <- wgt[dta$group]
   
   est_simple <- FactorHet(formula = y ~ state + letter, design = dta, K = 2, 
@@ -44,34 +54,137 @@ test_that('Weights for K = 2, conjoint', {
       weights = ~ outcome_weights,
       group = ~ group, task = ~ task, 
       choice_order = ~ prof,
-      control = FactorHet_control(iterations = 10),
-      init = FactorHet_init(short_EM_it = 1, nrep = 1))
+      control = FactorHet_control(
+        init_method = 'random_member'),
+      init = FactorHet_init(return_all = TRUE, short_EM = FALSE))
   
-  expect_false(all(est_simple$internal_parameters$weights$weights_W == 1))
-  expect_gte(min(diff(logLik(est_simple, 'log_posterior_seq'))), - sqrt(.Machine$double.eps))
+  expect_false(all(est_simple[[1]]$internal_parameters$weights$weights_W == 1))
+  lp_simple <- lapply(est_simple, FUN=function(i){logLik(i, 'log_posterior_seq')})
+  expect_true(min(sapply(lp_simple, FUN=function(i){range(diff(i))})) > -sqrt(.Machine$double.eps))
 
-  expect_vector(predict(est_simple, newdata = dta))
-  expect_s3_class(suppressWarnings(marginal_AME(est_simple)), 'FactorHet_vis')
-  expect_s3_class(suppressWarnings(moderator_AME(est_simple)), 'FactorHet_vis')
+  est_simple_clip <- FactorHet(formula = y ~ state + letter, design = dta, K = 2, 
+    lambda = 1e-3, moderator = ~ mod, 
+    weights = ~ outcome_weights,
+    group = ~ group, task = ~ task, 
+    choice_order = ~ prof,
+    control = FactorHet_control(tau_method = 'clip', init_method = 'random_member'),
+    init = FactorHet_init(return_all = TRUE, nrep =2, short_EM = FALSE))
+  
+  lp_simple_clip <- lapply(est_simple_clip, FUN=function(i){logLik(i, 'log_posterior_seq')})
+  expect_true(min(sapply(lp_simple_clip, FUN=function(i){range(diff(i))})) > -sqrt(.Machine$double.eps))
+  
+  est_simple_cpp <- suppressMessages(FactorHet(formula = y ~ state + letter, design = dta, K = 2, 
+       lambda = 1e-3, moderator = ~ mod, 
+       weights = ~ outcome_weights,
+       group = ~ group, task = ~ task, 
+       choice_order = ~ prof,
+       control = FactorHet_control(beta_method = 'cg', init_method = 'random_member'),
+       init = FactorHet_init(return_all = TRUE, nrep = 2, short_EM = FALSE)))
+  
+  lp_simple_cpp <- lapply(est_simple_cpp, FUN=function(i){logLik(i, 'log_posterior_seq')})
+  expect_true(min(sapply(lp_simple_cpp, FUN=function(i){range(diff(i))})) > -sqrt(.Machine$double.eps))
   
 })
 
+test_that('Weights for K = 2, free intercept', {
+  
+  dta <- data.frame(
+    state = sample(state.name[1:4], 1000, replace = T),
+    letter = sample(letters[1:3], 1000, replace = T)
+  )
+  
+  dta$group <- rep(sample(1:250, 500, replace = T), each = 2)
+  dta$task <- rep(1:500, each = 2)
+  dta$prof <- as.vector(sapply(1:500, FUN=function(i){c('l', 'r')[sample(2)]}))
+  dta$y <- as.vector(sapply(1:500, FUN=function(i){sample(0:1)}))
+  dta$mod <- runif(500, -1, 1)[dta$group]
+
+  wgt <- abs(rcauchy(n = 500))
+  dta$weights <- wgt[dta$group]
+  
+  est_simple <- FactorHet(formula = y ~ state + letter, design = dta, K = 2, 
+      lambda = 1e-3, moderator = ~ mod, 
+      weights = ~ weights,
+      group = ~ group, task = ~ task, 
+      choice_order = ~ prof,
+      control = FactorHet_control(single_intercept = FALSE,
+        init_method = 'random_member'),
+      init = FactorHet_init(return_all = TRUE, short_EM = FALSE))
+  
+  lp_simple <- lapply(est_simple, FUN=function(i){logLik(i, 'log_posterior_seq')})
+  expect_true(min(sapply(lp_simple, FUN=function(i){range(diff(i))})) > -sqrt(.Machine$double.eps))
+  
+  est_simple_clip <- FactorHet(formula = y ~ state + letter, design = dta, K = 2, 
+       lambda = 1e-3, moderator = ~ mod, 
+       weights = ~ weights,
+       group = ~ group, task = ~ task, 
+       choice_order = ~ prof,
+       control = FactorHet_control(
+         single_intercept = FALSE,
+         tau_method = 'clip', init_method = 'random_member'),
+       init = FactorHet_init(return_all = TRUE, short_EM = FALSE))
+  
+  lp_simple_clip <- lapply(est_simple_clip, FUN=function(i){logLik(i, 'log_posterior_seq')})
+  expect_true(min(sapply(lp_simple_clip, FUN=function(i){range(diff(i))})) > -sqrt(.Machine$double.eps))
+
+  est_simple_cpp <- FactorHet(formula = y ~ state + letter, 
+      design = dta, K = 2, 
+      lambda = 1e-3, moderator = ~ mod, 
+      weights = ~ weights,
+      group = ~ group, task = ~ task, 
+      choice_order = ~ prof,
+      control = FactorHet_control(
+        single_intercept = FALSE, 
+        beta_method = 'cpp', init_method = 'random_member'),
+      init = FactorHet_init(return_all = TRUE, short_EM = FALSE))
+  
+  lp_simple_cpp <- lapply(est_simple_cpp, FUN=function(i){logLik(i, 'log_posterior_seq')})
+  expect_true(min(sapply(lp_simple_cpp, FUN=function(i){range(diff(i))})) > -sqrt(.Machine$double.eps))
+
+})
+
+test_that('Post-Regression Functions Work with Weights', {
+  
+  dta <- data.frame(
+    state = sample(state.name[1:4], 1000, replace = T),
+    letter = sample(letters[1:3], 1000, replace = T)
+  )
+  
+  dta$group <- rep(sample(1:250, 500, replace = T), each = 2)
+  dta$task <- rep(1:500, each = 2)
+  dta$prof <- as.vector(sapply(1:500, FUN=function(i){c('l', 'r')[sample(2)]}))
+  dta$y <- as.vector(sapply(1:500, FUN=function(i){sample(0:1)}))
+  dta$mod <- runif(500, -1, 1)[dta$group]
+  
+  wgt <- abs(rcauchy(n = 500))
+  dta$weights <- wgt[dta$group]
+  
+  est_simple <- FactorHet(formula = y ~ state + letter, design = dta, K = 3, 
+    lambda = 1e-3, moderator = ~ mod, 
+    weights = ~ weights,
+    group = ~ group, task = ~ task, 
+    choice_order = ~ prof)
+
+  expect_false(all(est_simple$internal_parameters$weights$weights_W == 1))
+  pred_test <- predict(est_simple, newdata = dta)
+  pred_AME <- AME(est_simple)
+  pred_mfx <- margeff_moderators(est_simple)
+})
 
 test_that('Estimation methods for beta work with weights', {
   
-  N <- 100
   dta <- data.frame(
-    state = sample(state.name[1:4], N, replace = T),
-    letter = sample(letters[1:3], N, replace = T)
+    state = sample(state.name[1:4], 1000, replace = T),
+    letter = sample(letters[1:3], 1000, replace = T)
   )
   
-  dta$group <- rep(sample(1:(N/4), (N/2), replace = T), each = 2)
-  dta$task <- rep(1:(N/2), each = 2)
-  dta$prof <- as.vector(sapply(1:(N/2), FUN=function(i){c('l', 'r')[sample(2)]}))
-  dta$y <- as.vector(sapply(1:(N/2), FUN=function(i){sample(0:1)}))
-  dta$mod <- runif((N/2), -1, 1)[dta$group]
+  dta$group <- rep(sample(1:250, 500, replace = T), each = 2)
+  dta$task <- rep(1:500, each = 2)
+  dta$prof <- as.vector(sapply(1:500, FUN=function(i){c('l', 'r')[sample(2)]}))
+  dta$y <- as.vector(sapply(1:500, FUN=function(i){sample(0:1)}))
+  dta$mod <- runif(500, -1, 1)[dta$group]
   
-  wgt <- abs(rcauchy(n = (N/2)))
+  wgt <- abs(rcauchy(n = 500))
   dta$weights <- wgt[dta$group]
   
   est_simple <- FactorHet(formula = y ~ state + letter, design = dta, K = 3, 
@@ -79,8 +192,8 @@ test_that('Estimation methods for beta work with weights', {
     weights = ~ weights,
     group = ~ group, task = ~ task, 
     choice_order = ~ prof,
-    control = FactorHet_control(return_data = TRUE, iterations = 1),
-    init = FactorHet_init(nrep = 1, short_EM_it = 1))
+    control = FactorHet_control(return_data = TRUE, init_method = 'random_member'),
+    init = FactorHet_init(nrep = 1, short_EM = FALSE))
   
   weights <- est_simple$internal_parameters$data$weights
   y <- est_simple$internal_parameters$data$y
@@ -136,7 +249,7 @@ test_that('Estimation methods for beta work with weights', {
   blocked_beta <- solve(t(blocked_X) %*% Diagonal(x = as.vector(E.omega)) %*% blocked_X + blocked_E, 
         t(blocked_X) %*% as.vector(rep(y - 1/2, K) * weights * as.vector(obs.E.prob)))
   
-  expect_equivalent(cg_b$beta, as.vector(cpp_blocked), tol = 1e-5)
+  expect_equivalent(cg_b$beta, as.vector(cpp_blocked), tol = 1e-4, scale = 1)
   expect_equivalent(as.vector(blocked_beta), as.vector(cpp_blocked))
 
   prior_beta <- beta
@@ -178,21 +291,81 @@ test_that('Estimation methods for beta work with weights', {
   
 })
 
-test_that('Weights work for inital values and MBO', {
+test_that('Weights work for gamma = 0', {
   
-  N <- 100
+    dta <- data.frame(
+      state = sample(state.name[1:4], 1000, replace = T),
+      letter = sample(letters[1:3], 1000, replace = T)
+    )
+    
+    dta$group <- rep(sample(1:250, 500, replace = T), each = 2)
+    dta$task <- rep(1:500, each = 2)
+    dta$prof <- as.vector(sapply(1:500, FUN=function(i){c('l', 'r')[sample(2)]}))
+    dta$y <- as.vector(sapply(1:500, FUN=function(i){sample(0:1)}))
+    dta$mod <- runif(500, -1, 1)[dta$group]
+    
+    wgt <- abs(rcauchy(n = 500))
+    dta$weights <- wgt[dta$group]
+    
+    est_simple <- FactorHet(formula = y ~ state + letter, design = dta, K = 2, 
+        lambda = 1e-3, moderator = ~ mod, 
+        weights = ~ weights,
+        group = ~ group, task = ~ task, 
+        choice_order = ~ prof,
+        control = FactorHet_control(gamma = 0, 
+                                    init_method = 'random_member'),
+        init = FactorHet_init(return_all = TRUE, short_EM = FALSE))
+    
+    expect_false(all(est_simple[[1]]$internal_parameters$weights$weights_W == 1))
+    
+    lp_simple <- lapply(est_simple, FUN=function(i){logLik(i, 'log_posterior_seq')})
+    expect_true(min(sapply(lp_simple, FUN=function(i){range(diff(i))})) > -sqrt(.Machine$double.eps))
+    
+})
+
+test_that('Weights work for short EM ', {
+  
   dta <- data.frame(
-    state = sample(state.name[1:4], N, replace = T),
-    letter = sample(letters[1:3], N, replace = T)
+    state = sample(state.name[1:4], 1000, replace = T),
+    letter = sample(letters[1:3], 1000, replace = T)
   )
   
-  dta$group <- rep(sample(1:(N/4), (N/2), replace = T), each = 2)
-  dta$task <- rep(1:(N/2), each = 2)
-  dta$prof <- as.vector(sapply(1:(N/2), FUN=function(i){c('l', 'r')[sample(2)]}))
-  dta$y <- as.vector(sapply(1:(N/2), FUN=function(i){sample(0:1)}))
-  dta$mod <- runif((N/2), -1, 1)[dta$group]
+  dta$group <- rep(sample(1:250, 500, replace = T), each = 2)
+  dta$task <- rep(1:500, each = 2)
+  dta$prof <- as.vector(sapply(1:500, FUN=function(i){c('l', 'r')[sample(2)]}))
+  dta$y <- as.vector(sapply(1:500, FUN=function(i){sample(0:1)}))
+  dta$mod <- runif(500, -1, 1)[dta$group]
   
-  wgt <- abs(rcauchy(n = (N/2)))
+  wgt <- abs(rcauchy(n = 500))
+  dta$wgt_interal <- wgt[dta$group]
+  
+  est_simple <- FactorHet(formula = y ~ state + letter, design = dta, K = 2, 
+                          lambda = 1e-3, moderator = ~ mod, 
+                          weights = ~ wgt_interal,
+                          group = ~ group, task = ~ task, 
+                          choice_order = ~ prof)
+  
+  expect_false(all(est_simple$internal_parameters$weights$weights_W == 1))
+  
+  lp_simple <- logLik(est_simple, 'log_posterior_seq')
+  expect_true(min(diff(lp_simple)) > -sqrt(.Machine$double.eps))
+  
+})
+
+test_that('Weights work for inital values and MBO', {
+  
+  dta <- data.frame(
+    state = sample(state.name[1:4], 1000, replace = T),
+    letter = sample(letters[1:3], 1000, replace = T)
+  )
+  
+  dta$group <- rep(sample(1:250, 500, replace = T), each = 2)
+  dta$task <- rep(1:500, each = 2)
+  dta$prof <- as.vector(sapply(1:500, FUN=function(i){c('l', 'r')[sample(2)]}))
+  dta$y <- as.vector(sapply(1:500, FUN=function(i){sample(0:1)}))
+  dta$mod <- runif(500, -1, 1)[dta$group]
+  
+  wgt <- abs(rcauchy(n = 500))
   dta$wgt_interal <- wgt[dta$group]
   
   fit_MBO <- FactorHet_mbo(formula = y ~ state + letter, 
@@ -201,12 +374,14 @@ test_that('Weights work for inital values and MBO', {
      weights = ~ wgt_interal,
      group = ~ group, task = ~ task, 
      choice_order = ~ prof,
-     mbo_control = 
-        FactorHet_mbo_control(mbo_design = data.frame(l = c(-3, -2)), 
-        iters = 1))
+     mbo_control = FactorHet_mbo_control(mbo_design = data.frame(l = c(-3, -2)), 
+        iters = 0))
 
   expect_false(all(fit_MBO$internal_parameters$weights$weights_W == 1))
-
+  
+  lp_simple <- logLik(fit_MBO, 'log_posterior_seq')
+  expect_true(min(diff(lp_simple)) > -1e-6)
+  
 })
 
 

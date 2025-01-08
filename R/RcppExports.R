@@ -33,8 +33,8 @@ cpp_moderator_deriv <- function(W, phi, do_grad = TRUE, do_hess = TRUE, do_ln_he
     .Call('_FactorHet_cpp_moderator_deriv', PACKAGE = 'FactorHet', W, phi, do_grad, do_hess, do_ln_hess, moderator_grad)
 }
 
-cpp_gradient_phi <- function(par, K, norm_weights, weights_W, group_E_prob, W, ridge_penalty, gamma, rank_F, power_pi, b_r, lambda, sampling_weights = NULL) {
-    .Call('_FactorHet_cpp_gradient_phi', PACKAGE = 'FactorHet', par, K, norm_weights, weights_W, group_E_prob, W, ridge_penalty, gamma, rank_F, power_pi, b_r, lambda, sampling_weights)
+cpp_gradient_phi <- function(par, K, norm_weights, weights_W, group_E_prob, W, ridge_penalty, gamma, rank_F, power_pi, b_r, lambda) {
+    .Call('_FactorHet_cpp_gradient_phi', PACKAGE = 'FactorHet', par, K, norm_weights, weights_W, group_E_prob, W, ridge_penalty, gamma, rank_F, power_pi, b_r, lambda)
 }
 
 cpp_obj_phi <- function(par, K, norm_weights, weights_W, W, group_E_prob, ridge_penalty, gamma, rank_F, power_pi, b_r, lambda) {

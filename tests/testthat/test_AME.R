@@ -1,5 +1,20 @@
 context('Test that Average Marginal (Interaction) Effects can be calculated')
 
+if (isTRUE(as.logical(Sys.getenv("CI")))){
+  # If on CI
+  NITER <- 2
+  env_test <- "CI"
+}else if (!identical(Sys.getenv("NOT_CRAN"), "true")){
+  # If on CRAN
+  NITER <- 2
+  env_test <- "CRAN"
+  set.seed(1)
+}else{
+  # If on local machine
+  NITER <- 2000
+  env_test <- 'local'
+}
+
 test_that('Test that AME runs', {
   
   dta <- data.frame(
@@ -14,15 +29,15 @@ test_that('Test that AME runs', {
   dta$y <- ifelse(rbinom(nrow(dta), 1, plogis(dta$mod)) == 1, dta$y1, dta$y2)
   
   est_simple <- FactorHet(formula = y ~ state + letter + region, design = dta, 
-    init = FactorHet_init(nrep = 2),
     K = 2, lambda = 1e-3, 
     moderator = ~ mod, 
-    control =  FactorHet_control(iterations = 10))
+    control =  FactorHet_control(init_method = 'mclust',
+      iterations = 10))
   
-  est_AME <- marginal_AME(est_simple)
-  est_ACE <- marginal_ACE(est_simple, baseline = list(letter = 'a', state = 'Arizona'))
-  est_AMIE <- marginal_AMIE(est_simple, baseline = list(letter = 'a', state = 'Arizona'))
-  est_AMIE <- marginal_AMIE(est_simple)
+  est_AME <- AME(est_simple)
+  est_ACE <- ACE(est_simple, baseline = list(letter = 'a', state = 'Arizona'))
+  est_AMIE <- AMIE(est_simple, baseline = list(letter = 'a', state = 'Arizona'))
+  est_AMIE <- AMIE(est_simple)
   
   expect_s3_class(est_AME, 'FactorHet_vis')
   expect_s3_class(est_ACE, 'FactorHet_vis')
@@ -50,14 +65,14 @@ test_that('Test that AME works with restriction', {
     lambda = 1e-3, moderator = ~ mod, 
     group = ~ group, task = ~ task, 
     choice_order = ~ prof,
-    initialize = FactorHet_init(nrep = 1),
+    initialize = FactorHet_init(nrep = 1, short_EM_it = 5),
     control =  FactorHet_control(return_data = TRUE, iterations = 15))
   
   expect_null(print(est_simple))
   expect_false(is.null(est_simple$internal_parameters$rare$rare_fmt_col))
   
   simple_AME <- suppressMessages(
-    suppressWarnings(marginal_AME(est_simple, verbose = FALSE, ignore_restrictions = TRUE))
+    suppressWarnings(AME(est_simple, verbose = FALSE, ignore_restrictions = TRUE))
   )
   #Do AME manually
   manual_AME <- data.frame()
@@ -71,8 +86,8 @@ test_that('Test that AME works with restriction', {
     # Marginalizes over all other factors
     mod_dta$state <- ifelse(mod_dta$prof == 'r', v, mod_dta$state)
     baseline_dta$state <- ifelse(baseline_dta$prof == 'r', 'Alabama', baseline_dta$state)
-    AME_right <- colMeans(predict(est_simple, newdata = mod_dta, by_cluster = TRUE) -
-      predict(est_simple, newdata = baseline_dta, by_cluster = TRUE))
+    AME_right <- colMeans(predict(est_simple, newdata = mod_dta, by_group = TRUE) -
+      predict(est_simple, newdata = baseline_dta, by_group = TRUE))
     # Do the same for LEFT
     baseline_dta <- mod_dta <- copy_dta
     mod_dta$state <- ifelse(mod_dta$prof == 'l', v, mod_dta$state)
@@ -80,17 +95,17 @@ test_that('Test that AME works with restriction', {
     # Note that this is Pr(Y_i = 1 | T) - Pr(Y_i = | BASE)
     # So if we +1/-1  - Pr(Y_i = 0 | T) + Pr(Y_i = 0 | Base)
     # So if we take negative, Pr(Y_i 0 | T) - Pr(Y_i = 0 | Base)
-    AME_left <- colMeans(predict(est_simple, newdata = mod_dta, by_cluster = TRUE) -
-      predict(est_simple, newdata = baseline_dta, by_cluster = TRUE))
+    AME_left <- colMeans(predict(est_simple, newdata = mod_dta, by_group = TRUE) -
+      predict(est_simple, newdata = baseline_dta, by_group = TRUE))
     AME <- (AME_right - AME_left)/2
     manual_AME <- rbind(manual_AME, 
-      data.frame(state = v, marginal_effect = AME, cluster = c(1,2)))
+      data.frame(state = v, marginal_effect = AME, group = c(1,2)))
   }
   
   implemented_AME <- subset(simple_AME$data, !baseline & factor == 'state')
-  order_AME <- apply(implemented_AME[, c('level', 'cluster')], MARGIN = 1, paste, collapse =' ')
+  order_AME <- apply(implemented_AME[, c('level', 'group')], MARGIN = 1, paste, collapse =' ')
 
-  manual_AME$order <- apply(manual_AME[, c('state', 'cluster')], MARGIN = 1, paste, collapse =' ')
+  manual_AME$order <- apply(manual_AME[, c('state', 'group')], MARGIN = 1, paste, collapse =' ')
   
   expect_equivalent(
     implemented_AME$marginal_effect,
@@ -98,7 +113,7 @@ test_that('Test that AME works with restriction', {
   )
 
   #Do AME manually *with* restricted randomization
-  simple_AME <- marginal_AME(est_simple)
+  simple_AME <- AME(est_simple)
   manual_AME <- data.frame()
   for (v in state.name[2:4]){
     
@@ -118,8 +133,8 @@ test_that('Test that AME works with restriction', {
     mod_dta_right$state <- factor(mod_dta_right$state, levels = state.name[1:4])
     baseline_dta_right$state <- factor(baseline_dta_right$state, levels = state.name[1:4])
     
-    AME_right <- colMeans(predict(est_simple, newdata = mod_dta_right, by_cluster = TRUE) -
-                            predict(est_simple, newdata = baseline_dta_right, by_cluster = TRUE))
+    AME_right <- colMeans(predict(est_simple, newdata = mod_dta_right, by_group = TRUE) -
+                            predict(est_simple, newdata = baseline_dta_right, by_group = TRUE))
     
     baseline_dta_left <- dta
     baseline_dta_left$invalid <- unsplit(lapply(split(baseline_dta_left, 
@@ -135,16 +150,16 @@ test_that('Test that AME works with restriction', {
     mod_dta_left$state <- factor(mod_dta_left$state, levels = state.name[1:4])
     baseline_dta_left$state <- factor(baseline_dta_left$state, levels = state.name[1:4])
     
-    AME_left <- colMeans(predict(est_simple, newdata = mod_dta_left, by_cluster = TRUE) -
-                           predict(est_simple, newdata = baseline_dta_left, by_cluster = TRUE))
+    AME_left <- colMeans(predict(est_simple, newdata = mod_dta_left, by_group = TRUE) -
+                           predict(est_simple, newdata = baseline_dta_left, by_group = TRUE))
     AME <- ( AME_right - AME_left )/2
     
-    manual_AME <- rbind(manual_AME, data.frame(state = v, marginal_effect = AME, cluster = c(1,2)))
+    manual_AME <- rbind(manual_AME, data.frame(state = v, marginal_effect = AME, group = c(1,2)))
   }
   
   implemented_AME <- subset(simple_AME$data, !baseline & factor == 'state')
-  order_AME <- apply(implemented_AME[, c('level', 'cluster')], MARGIN = 1, paste, collapse =' ')
-  manual_AME$order <- apply(manual_AME[, c('state', 'cluster')], MARGIN = 1, paste, collapse =' ')
+  order_AME <- apply(implemented_AME[, c('level', 'group')], MARGIN = 1, paste, collapse =' ')
+  manual_AME$order <- apply(manual_AME[, c('state', 'group')], MARGIN = 1, paste, collapse =' ')
   
   expect_equivalent(
     implemented_AME$marginal_effect,

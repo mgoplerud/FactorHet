@@ -836,6 +836,24 @@ estimate.vcov <- function(object, tol_epsilon = 1e-4, type = 'louis', format_se 
   }
 }
 
+#' @rdname FactorHet-class
+#' @param phi A logical value indicating whether the standard errors from the
+#'   moderator parameters, \eqn{\phi}, should be returned as well. The default
+#'   is \code{TRUE}.
+#' @param se.method A string value for the type of standard errors to be
+#'   computed. The default, and primary option, is \code{NULL} which is
+#'   generally equivalent to \code{"louis"} (Louis 1982), as discussed in Goplerud et al.
+#'   (2025).
+#' @references 
+#'   
+#'   Louis, Thomas A. 1982. "Finding the Observed Information Matrix when Using
+#'   the EM Algorithm." \emph{Journal of the Royal Statistical Society. Series B
+#'   (Methodological)}. 44(2):226-233.
+#'   
+#'   Goplerud, Max, Kosuke Imai, and Nicole E. Pashley. 2025. "Estimating
+#'   Heterogeneous Causal Effects of High-Dimensional Treatments: Application to
+#'   Conjoint Analysis." arxiv preprint: \url{https://arxiv.org/abs/2201.01357}
+#'   
 #' @export
 vcov.FactorHet <- function(object, phi = TRUE, se.method = NULL, ...){
   
@@ -843,20 +861,30 @@ vcov.FactorHet <- function(object, phi = TRUE, se.method = NULL, ...){
   if(length(options) != 0){
     stop('Only argumnets to vcov for FactorHet are "phi" and "se.method".')
   }
-  if (is.null(se.method)){
-    est_vcov <- object$vcov
-    if (is.null(est_vcov)){
-      est_vcov <- tryCatch(estimate.vcov(object), error = function(e){NULL})
+  if (inherits(object, 'FactorHet_refit')){
+    if (!is.null(se.method)){
+      warning('se.method != NULL not used for FactorHet_refit')
     }
+    if (phi){
+      stop('phi=TRUE invalid for FactorHet_refit')
+    }
+    return(object$vcov$vcov)
   }else{
-    est_vcov <- estimate.vcov(object, type = se.method)
-  }
-  if (is.null(est_vcov)){return(NULL)}
-  dim_beta <- est_vcov$dim
-  dim_beta <- prod(dim_beta)
-  est_vcov <- est_vcov$vcov
-  if (!phi){#Return *only* the standard errors on beta
-    est_vcov <- est_vcov[1:dim_beta, 1:dim_beta]
+    if (is.null(se.method)){
+      est_vcov <- object$vcov
+      if (is.null(est_vcov)){
+        est_vcov <- tryCatch(estimate.vcov(object), error = function(e){NULL})
+      }
+    }else{
+      est_vcov <- estimate.vcov(object, type = se.method)
+    }
+    if (is.null(est_vcov)){return(NULL)}
+    dim_beta <- est_vcov$dim
+    dim_beta <- prod(dim_beta)
+    est_vcov <- est_vcov$vcov
+    if (!phi){#Return *only* the standard errors on beta
+      est_vcov <- est_vcov[1:dim_beta, 1:dim_beta]
+    }
   }
   return(as.matrix(est_vcov))
 }

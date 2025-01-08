@@ -54,36 +54,38 @@ sum_mod_discrete <- function(object, type = c('bar', 'row', 'column')){
   if (n_merge != nrow(flat_data)){
     stop('Merging failed for sum_mod_continuous. Try doing manually using information from "posterior".')
   }
-  cluster_used <- setdiff(names(object$posterior$posterior_predictive), 'group')
+  group_used <- setdiff(names(object$posterior$posterior_predictive), 'group')
   flat_data <- do.call('rbind', lapply(1:K, FUN=function(k){
-    flat_k <- flat_data[, c(1:4, match(paste0('cluster_', k), names(flat_data))), drop = F]
-    names(flat_k)[5] <- 'cluster_prob'
-    flat_k$cluster <- k
+    flat_k <- flat_data[, c(1:4, match(paste0('group_', k), names(flat_data))), drop = F]
+    names(flat_k)[5] <- 'group_prob'
+    flat_k$group <- k
     return(flat_k)
   }))
   if ( (n_merge * K) != nrow(flat_data)){
     stop('Merging failed for sum_mod_continuous. Try doing manually using information from "posterior".')
   }
   # Get the weight for the plot
-  flat_data$plot_weight <- flat_data$survey_weight * flat_data$cluster_prob
-  flat_data$cluster <- factor(paste0('Cluster ', flat_data$cluster), levels = paste0('Cluster ', 1:K))
+  flat_data$plot_weight <- flat_data$survey_weight * flat_data$group_prob
+  flat_data$group <- factor(paste0('Group ', flat_data$group), levels = paste0('Group ', 1:K))
   
   if (type == 'row'){
-    fmt_data <- split(flat_data[, c('plot_weight', 'cluster', 'value', 'variable')], 
-                      flat_data[, c('variable', 'value')], drop = TRUE)
+    fmt_data <- split(flat_data[, c('plot_weight', 'group', 'value', 'variable')], 
+                      flat_data[, c('variable', 'value')])
+    fmt_data <- fmt_data[which(sapply(fmt_data, nrow) != 0)]
     fmt_data <- do.call('rbind', lapply(fmt_data, FUN=function(i){
-      agg_i <- aggregate(plot_weight ~ cluster, data = i, FUN = sum)
+      agg_i <- aggregate(plot_weight ~ group, data = i, FUN = sum)
       agg_i$value <- unique(i$value)
       agg_i$variable <- unique(i$variable)
       agg_i$norm_weight <- agg_i$plot_weight/sum(agg_i$plot_weight)
       return(agg_i)
     }))    
   }else if (type %in% c('column', 'bar')){
-    fmt_data <- split(flat_data[, c('plot_weight', 'cluster', 'value', 'variable')], 
-                      flat_data[, c('cluster', 'variable')], drop = TRUE)
+    fmt_data <- split(flat_data[, c('plot_weight', 'group', 'value', 'variable')], 
+                      flat_data[, c('group', 'variable')])
+    fmt_data <- fmt_data[which(sapply(fmt_data, nrow) != 0)]
     fmt_data <- do.call('rbind', lapply(fmt_data, FUN=function(i){
       agg_i <- aggregate(plot_weight ~ value, data = i, FUN = sum)
-      agg_i$cluster <- unique(i$cluster)
+      agg_i$group <- unique(i$group)
       agg_i$variable <- unique(i$variable)
       agg_i$norm_weight <- agg_i$plot_weight/sum(agg_i$plot_weight)
       return(agg_i)
@@ -92,23 +94,31 @@ sum_mod_discrete <- function(object, type = c('bar', 'row', 'column')){
   rownames(fmt_data) <- NULL
   
   fmt_data$variable <- as.factor(fmt_data$variable)
-  fmt_data$cluster <- factor(fmt_data$cluster, levels = paste0('Cluster ', 1:K))
+  fmt_data$group <- factor(fmt_data$group, levels = paste0('Group ', 1:K))
   
+  .data <- NULL
   if (type == 'bar'){
     g <- ggplot(data=fmt_data,
-        aes_string(y='norm_weight', x='value', fill='cluster')) +
+        aes(y=.data[['norm_weight']], 
+            x=.data[['value']], 
+            fill=.data[['group']])) +
       geom_bar(stat="identity", position=position_dodge())+
       xlab("Category") +
-      labs(fill="Cluster number")+
+      labs(fill="Group number")+
       facet_grid(. ~ variable, scales="free") +
       theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
   }else{
     fmt_data$round_norm <- round(fmt_data$norm_weight,2)
+    fmt_data$round_norm <- sprintf('%.2f', fmt_data$round_norm)
     g <- ggplot(data=fmt_data, 
-        aes_string(x = 'cluster', y = 'value', fill='norm_weight', label='round_norm')) +
+        aes(
+          x = .data[['group']], 
+          y = .data[['value']], 
+          fill= .data[['norm_weight']], 
+          label=.data[['round_norm']])) +
       geom_tile()+
       geom_text(color="white")+
-      xlab("Cluster") +
+      xlab("Group") +
       labs(fill="Percent")+
       scale_x_discrete(position = "top") +
       scale_fill_gradient(low="#56B1F7", high="#132B43") +
@@ -177,24 +187,27 @@ sum_mod_continuous <-function(object){
   if (n_merge != nrow(flat_data)){
     stop('Merging failed for sum_mod_continuous. Try doing manually using information from "posterior".')
   }
-  cluster_used <- setdiff(names(object$posterior$posterior_predictive), 'group')
+  group_used <- setdiff(names(object$posterior$posterior_predictive), 'group')
   flat_data <- do.call('rbind', lapply(1:K, FUN=function(k){
-    flat_k <- flat_data[, c(1:4, match(paste0('cluster_', k), names(flat_data))), drop = F]
-    names(flat_k)[5] <- 'cluster_prob'
-    flat_k$cluster <- k
+    flat_k <- flat_data[, c(1:4, match(paste0('group_', k), names(flat_data))), drop = F]
+    names(flat_k)[5] <- 'group_prob'
+    flat_k$group <- k
     return(flat_k)
   }))
   if ( (n_merge * K) != nrow(flat_data)){
     stop('Merging failed for sum_mod_continuous. Try doing manually using information from "posterior".')
   }
   # Get the weight for the plot
-  flat_data$plot_weight <- flat_data$survey_weight * flat_data$cluster_prob
-  flat_data$cluster <- factor(paste0('Cluster ', flat_data$cluster), levels = paste0('Cluster ', 1:K))
+  flat_data$plot_weight <- flat_data$survey_weight * flat_data$group_prob
+  flat_data$group <- factor(paste0('Group ', flat_data$group), levels = paste0('Group ', 1:K))
   #Plot
+  .data <- NULL
   g <- ggplot(data=flat_data, 
-      aes_string(x='cluster', y='value', weight='plot_weight')) +
+      aes(x=.data[['group']], 
+          y=.data[['value']], 
+          weight=.data[['plot_weight']])) +
       geom_boxplot()+
-      labs(title="Weighted boxplots by cluster", x ="Cluster", y = "")+
+      labs(title="Weighted boxplots by group", x ="Group", y = "")+
       scale_x_discrete(position = "top") +
       facet_grid(variable ~., scales="free_y", switch = 'y') +
       theme_bw() +
@@ -206,10 +219,10 @@ sum_mod_continuous <-function(object){
   return(out)
 }
 
-#' Visualize the Posterior by Observed Moderators
+#' Visualize the posterior by observed moderators
 #'
 #' Provides univariate summaries of the estimated posterior predictive
-#' probabilities of cluster membership by the moderators. Can produce analyses
+#' probabilities of group membership by the moderators. Can produce analyses
 #' for continuous variables (weighted boxplot) or discrete variables (row/column
 #' tables).
 #' 
@@ -220,28 +233,40 @@ sum_mod_continuous <-function(object){
 #'   \bold{Discrete Moderators}: Discrete moderators are shown by either a
 #'   \code{"row"}, \code{"column"}, or \code{"bar"} plot. In the \code{"row"}
 #'   plot, the quantity reported is, for each level of the moderator, what
-#'   proportion of people fall into which cluster? That is, for moderator value
-#'   "a", 25\% of people are in cluster 1 and 75\% of people are in cluster 2.
-#'   This is estimated using a weighted average by the estimated posterior
-#'   predictive probabilities of cluster membership and any survey weights.
+#'   proportion of people fall into each group. For example, for moderator value
+#'   "a", 25\% of people are in group 1 and 75\% of people are in group 2.
+#'   This is estimated using a weighted average, weighting by the estimated posterior
+#'   predictive probabilities of group membership and any survey weights.
 #'   
-#'   By contrast the \code{"column"} and \code{"bar"} reports the distribution
-#'   by cluster. That is, for Cluster 1, 30\% of people have moderator value "f",
-#'   50% have moderator value "g", and 20\% have moderator value "h".
+#'   By contrast \code{"column"} and \code{"bar"} reports the distribution
+#'   by group. For example, for Group 1, 30\% of people have moderator value "f",
+#'   50\% have moderator value "g", and 20\% have moderator value "h".
 #'   \code{"bar"} reports this as a bar chart whereas \code{"column"} reports as a
 #'   tile plot.
 #'   
 #'   For all three types of plots, the data is provided in the returned output.
 #'   
 #'   \bold{Continuous Moderators}: Continuous moderators are shown by a
-#'   histogram of the value for each cluster, weighted by each observation's
-#'   posterior predictive probability of being in that cluster.
-#' @param object A model fit using FactorHet
-#' @param visualize Which types of moderators to show? Default (\code{"all"})
+#'   histogram of the value for each group, weighted by each observation's
+#'   posterior predictive probability of being in that group.
+#' @param object A model fit using \code{\link{FactorHet}} or \code{\link{FactorHet_mbo}}.
+#' @param visualize Specifies which types of moderators to show. Default (\code{"all"})
 #'   shows all moderators. Other options include \code{"discrete"} and
 #'   \code{"continuous"}.
 #' @param type_discrete Show the results by \code{"row"} or \code{"column"} or
 #'   \code{"all"} (i.e. both).
+#' 
+#' @examples 
+#' data(immigration)
+#' set.seed(15)
+#' # Estimate model with arbitrary choice of lambda
+#' fit <- FactorHet(Chosen_Immigrant ~ Plans + Ed + Country,
+#'   design = immigration, lambda = 1e-2,
+#'   moderator = ~ party_ID,
+#'   K = 2, group = ~ CaseID,
+#'   control = FactorHet_control(init = 'mclust'),
+#'   task = ~ contest_no, choice_order = ~ choice_id)
+#' posterior_by_moderators(fit)
 #' @importFrom stats quantile
 #' @export
 posterior_by_moderators <- function(object, 
@@ -281,11 +306,11 @@ posterior_by_moderators <- function(object,
   return(out)
 }
 
-#Create table of joint posterior predictive prob of two clusterings
-#data_obj is a data frame with the posterior pred prob for each individual for each clustering
-#clus_var_nam1 is a vector of the column names corresponding to the clusters in the first clustering
-#clus_var_nam2 is the same for the second clustering
-cluster_table_fun<-function(data_obj, clus_var_nam1, clus_var_nam2){
+#Create table of joint posterior predictive prob of two groupings
+#data_obj is a data frame with the posterior pred prob for each individual for each grouping
+#clus_var_nam1 is a vector of the column names corresponding to the groups in the first grouping
+#clus_var_nam2 is the same for the second grouping
+group_table_fun<-function(data_obj, clus_var_nam1, clus_var_nam2){
   table.dat <- data.frame(matrix(ncol = length(clus_var_nam1), nrow = length(clus_var_nam2)), row.names=clus_var_nam2)
   colnames(table.dat) <- clus_var_nam1
   for(i in clus_var_nam1){
@@ -296,54 +321,64 @@ cluster_table_fun<-function(data_obj, clus_var_nam1, clus_var_nam2){
   return(table.dat)
 }
 
-#' Visualize the Effects of Moderators
+
+#' Compute association between moderators and group membership
 #' 
-#' Report an estimate of the average marginal effect of changing a moderator on
-#' the posterior predictive probability of cluster membership.
+#' @description This function computes the impact of changing a
+#'   moderator on the group membership probabilities.
+#' @details This function computes the change in \eqn{\pi_k(X_i)} for the change
+#'   in one of the moderators in \eqn{X_i}. The change is averaged across the
+#'   distribution of the other moderators found in \code{newdata} (or, by
+#'   default, the estimation data). It thus can be thought of as the "marginal
+#'   effect" of changing one moderator on the probability of group memberships,
+#'   holding all other moderators constant. It returns a data.frame of the
+#'   estimated effects as well as a plot to visualize the changes in
+#'   \eqn{\pi_k(X_i)}. Goplerud et al. (2025) provides more discussion of this
+#'   method.
 #' 
-#' @param object Object fit using \code{FactorHet} or \code{FactorHet_mbo}.
-#' @param newdata Default \code{NULL} marginalizes over the estimation data.
-#'   Provide a data.frame with the relevant moderators to calculate the average
-#'   effects of moderators changing on that data.
-#' @param vcov Default of \code{TRUE} shows standard errors.
-#' @param se.method Default of \code{NULL} uses estimated standard errors. See
-#'   \code{FactorHet.vcov} for more information.
-#' @param quant_continuous For continuous moderator, two quantiles to show
-#'   effect difference between.
-#' @importFrom reshape2 dcast melt
+#' @param object An object from \code{\link{FactorHet}} or
+#'   \code{\link{FactorHet_mbo}}.
+#' @param newdata An optional argument that provides the data over which to
+#'   average the distribution of the other moderators. The default is
+#'   \code{NULL} which uses the estimation data.
+#' @param vcov A logical value indicating whether the standard errors should be
+#'   computed. The default is \code{TRUE}.
+#' @param se.method An optional argument as to the type of standard errors used.
+#'   The default is \code{NULL} uses estimated standard errors.
+#'   \code{\link{vcov.FactorHet}} provides more information.
+#' @param quant_continuous A numeric vector consisting of two values between 0
+#'   and 1. For continuous moderators, it sets two quantiles of the moderator's
+#'   distribution to show the difference between. The default \code{c(0.25,
+#'   0.75)} compares the effect of changing the moderator from its 25th
+#'   percentile to its 75th percentile.
+#' @param abs_diff A logical value as to whether the difference or absolute
+#'   difference in the change in \eqn{\pi_k(X_i)} should be shown. The default
+#'   is \code{FALSE} which returns the standard "marginal effect" of changing
+#'   the moderators with a standard error computed via the delta method. The
+#'   value \code{TRUE} draws 10,000 samples from the asymptotic distribution of
+#'   the moderators and computes the average the \bold{absolute values} of the
+#'   marginal effects for each observation in \code{newdata} using those
+#'   samples. This is considerably slower than the default setting. The appendix
+#'   of Goplerud et al. (2025) illustrates one use of this argument.
+#'  
+#' @examples
+#' # Estimate model with arbitrary choice of lambda
+#' data(immigration)
+#' set.seed(15)
+#' # Estimate model with arbitrary choice of lambda
+#' fit <- FactorHet(Chosen_Immigrant ~ Plans + Ed + Country,
+#'   design = immigration, lambda = 1e-2,
+#'   moderator = ~ party_ID,
+#'   K = 2, group = ~ CaseID,
+#'   control = FactorHet_control(init = 'mclust'),
+#'   task = ~ contest_no, choice_order = ~ choice_id)
+#' margeff_moderators(fit)
 #' @import ggplot2
-#' 
-#' @details For each moderator, this function calculates the average marginal
-#'   effect of changing the moderator on the probability of cluster membership
-#'   \emph{controlling for all other moderators}. Univariate summaries can be
-#'   found using \link{posterior_by_moderators}.
-#'   
-#'   Formally, following Goplerud
-#'   et al. (2022) [Equation 12], it reports the following for each moderator j
-#'   and two values x_1 and x_0.
-#'   
-#'   \deqn{E[\pi_k(X_{ij} = x_1,X_{i,-j}) - \pi_k(X_{ij} = x_0,X_{i,-j})]}
-#'   
-#'   The expectation is calculated using an average over all observations in the
-#'   data. It thus calculates the "average marginal effect" where each
-#'   observation has moderator j set to x_1 and the difference in probability
-#'   from the moderator set to x_0 is calculated.
-#'
-#'   For variables with two levels (e.g. binary), the two levels are compared.
-#'   For factor variables, they are compared against a baseline level. For
-#'   continuous variables, they set are to quantiles specified in
-#'   \code{quant_continuous}, by default the 25th and 75th percentiles.
-#'   
-#'   In the accompanying plot, dark arrows indicate a p-value below 0.05 whereas
-#'   light/transparent arrows indicate a p-value above 0.05.
-#'
-#' @return A list of two elements. It contains, respectively, the ggplot object
-#'   and the data ("plot" and "data").
-#' 
 #' @export
-moderator_AME <- function(object, newdata = NULL, vcov = TRUE,
-                          se.method = NULL,
-                          quant_continuous = c(0.25, 0.75)){
+margeff_moderators <- function(object, newdata = NULL, vcov = TRUE,
+                          se.method = NULL, 
+                          quant_continuous = c(0.25, 0.75),
+                          abs_diff = FALSE){
   
   phi <- coef(object, 'phi')
   K <- nrow(phi)
@@ -372,6 +407,20 @@ moderator_AME <- function(object, newdata = NULL, vcov = TRUE,
   W_level <- object$internal_parameters$W$args$xlev
   #For each variable, do the prediction
   all_mfx <- data.frame()
+  
+  if (abs_diff){
+    if (!vcov){stop('Cannot do "abs_diff" if vcov=FALSE')}
+    # Draw samples from N(mu, V)    
+    # L %*% t(L) = V
+    # Cholesky decompose the variance
+    chol_vcov <- t(chol(object_vcov))
+    stopifnot(isTRUE(all.equal(as.matrix(chol_vcov %*% t(chol_vcov)) , object_vcov)))
+    # Draws samples from N(0, V)
+    sim_phi <- matrix(rnorm(10^4 * ncol(object_vcov)), ncol = ncol(object_vcov)) %*% t(chol_vcov)
+    # Add in mean mu to each sample
+    sim_phi <- sweep(sim_phi, MARGIN = 2, FUN = '+', STATS = as.vector(t(coef(object, 'phi')[-1,])))
+  }
+  
   for (v in names(var_W)){
     
     copy_design <- object$internal_parameters$data$design
@@ -414,7 +463,9 @@ moderator_AME <- function(object, newdata = NULL, vcov = TRUE,
       
       for (u in unique_levels_v){
         copy_design[,v] <- u
-        pred_u <- predict(object, newdata = copy_design, calc_gradient = vcov, return = 'postpred_only', override_weights = FALSE)
+        pred_u <- predict(object, newdata = copy_design, 
+          calc_gradient = vcov, 
+          return = 'postpred_only', override_weights = FALSE)
         
         stopifnot(identical(attributes(pred_u)$norm_weights,
                             norm_weights))
@@ -422,17 +473,48 @@ moderator_AME <- function(object, newdata = NULL, vcov = TRUE,
         if (vcov){
           W_u <- attributes(pred_u)$W
           grad_diff <- delta_ME_multinom(K = K, prob_high = pred_u, W_high = W_u,
-                                         prob_low = pred_baseline, W_low = W_baseline, vcov = object_vcov,
-                                         weights = norm_weights)              
+             prob_low = pred_baseline, W_low = W_baseline, vcov = object_vcov,
+             weights = norm_weights)              
         }else{
           grad_diff <- rep(NA, K)
         }
+        
         mean_u <- colSums(Diagonal(x = norm_weights) %*% pred_u)
         #Average Posterior Predictive After Change
         pred_u <- colSums(Diagonal(x = norm_weights) %*% pred_u)
-        all_mfx <- rbind(all_mfx, data.frame(variable = paste0(v, '(', u, ')'), 
-                                             type = var_type, 'diff' = t(mean_u - mean_baseline), 'var' = t(grad_diff),
-                                             'changed' = t(mean_u), 'baseline' = t(mean_baseline), stringsAsFactors = F))
+        
+        if (abs_diff){
+          # Simulate the values
+          pred_sim <- do.call('rbind', lapply(1:nrow(sim_phi), FUN=function(i){
+            sphi <- rbind(0, matrix(sim_phi[i,,drop=FALSE], byrow = TRUE, nrow = K - 1))
+            diffphi <- softmax_matrix(W_u %*% t(sphi)) - softmax_matrix(W_baseline %*% t(sphi))
+            data.frame(
+              abs_diff = colSums(Diagonal(x=norm_weights) %*% abs(diffphi)),
+              K = 1:K
+            )
+          }))
+          out_mfx <- do.call('rbind', lapply(c('abs_diff'), FUN=function(v){
+            out_v <- sapply(split(pred_sim[[v]], pred_sim$K), FUN=function(i){
+              c('mean' = mean(i), 'median' = median(i), quantile(i, c(0.025, 0.975)))
+            })
+            out_v <- data.frame(t(out_v))
+            names(out_v) <- c('mean', 'median', 'll', 'ul')
+            out_v$K <- 1:nrow(out_v)
+            out_v$qoi <- v
+            return(out_v)
+          }))
+          out_mfx$point_estimate_average <- mean_u - mean_baseline
+          out_mfx$variable <- paste0(v, '(', u, ')')
+          out_mfx$type <- var_type
+          all_mfx <- rbind(all_mfx, out_mfx)
+        }else{
+          all_mfx <- rbind(all_mfx, data.frame(variable = paste0(v, '(', u, ')'), 
+           type = var_type, 'diff' = t(mean_u - mean_baseline), 
+           'var' = t(grad_diff),
+           'changed' = t(mean_u), 'baseline' = t(mean_baseline), 
+           stringsAsFactors = F))
+          
+        }
         
       }
     }else{
@@ -446,9 +528,9 @@ moderator_AME <- function(object, newdata = NULL, vcov = TRUE,
       stopifnot(identical(attributes(predict_high)$norm_weights,
                           attributes(predict_low)$norm_weights))
       norm_weights <- attributes(predict_high)$norm_weights
-      
+
       if (vcov){
-        
+
         W_low <- attributes(predict_low)$W
         W_high <- attributes(predict_high)$W
         
@@ -462,67 +544,160 @@ moderator_AME <- function(object, newdata = NULL, vcov = TRUE,
       predict_low <- colSums(Diagonal(x = norm_weights) %*% predict_low)
       predict_high <- colSums(Diagonal(x = norm_weights) %*% predict_high)
       
-      #Average Change in Posterior Predictive
-      all_mfx <- rbind(all_mfx, data.frame(variable = v, type = var_type, 
-                                           'diff' = t(predict_high - predict_low), var = t(grad_diff),
-                                           'changed' = t(predict_high), 'baseline' = t(predict_low),  stringsAsFactors = F))
+      if (abs_diff){
+        # Simulate the average of the absolute values
+        pred_sim <- do.call('rbind', lapply(1:nrow(sim_phi), FUN=function(i){
+          sphi <- rbind(0, matrix(sim_phi[i,,drop=FALSE], byrow = TRUE, nrow = K-1))
+          diffphi <- softmax_matrix(W_high %*% t(sphi)) - softmax_matrix(W_low %*% t(sphi))
+          data.frame(
+                     abs_diff = colSums(Diagonal(x=norm_weights) %*% abs(diffphi)),
+                     K = 1:K
+          )
+        }))
+        out_mfx <- do.call('rbind', lapply(c('abs_diff'), FUN=function(v){
+          out_v <- sapply(split(pred_sim[[v]], pred_sim$K), FUN=function(i){
+            c('mean' = mean(i), 'median' = median(i), quantile(i, c(0.025, 0.975)))
+          })
+          out_v <- data.frame(t(out_v))
+          names(out_v) <- c('mean', 'median', 'll', 'ul')
+          out_v$K <- 1:nrow(out_v)
+          out_v$qoi <- v
+          return(out_v)
+        }))
+        out_mfx$variable <- v
+        out_mfx$type <- var_type
+        out_mfx$point_estimate_average <- predict_high - predict_low
+        all_mfx <- rbind(all_mfx, out_mfx)
+        # Average absolute Change in Posterior Predictive
+        # pred_absolute <- colSums(Diagonal(x=norm_weights) %*% abs(predict_high - predict_low))
+        # all_mfx <- rbind(all_mfx, data.frame(variable = v, type = var_type, 
+        #                                      'diff' = t(pred_absolute), var = t(grad_diff),
+        #                                      'signed_change' = t(colSums(Diagonal(x=norm_weights) %*% sign(predict_high - predict_low))),
+        #                                      'changed' = NA, 'baseline' = NA,  stringsAsFactors = F))
+      }else{
+        #Average Change in Posterior Predictive
+        all_mfx <- rbind(all_mfx, data.frame(variable = v, type = var_type, 
+                                             'diff' = t(predict_high - predict_low), var = t(grad_diff),
+                                             'changed' = t(predict_high), 'baseline' = t(predict_low),  stringsAsFactors = F))
+      }
+      
     }
   }  
   mfx_order <- as.vector(unlist(mapply(names(W_level), W_level, 
                                        FUN=function(i,j){paste0(i,'(', j, ')')})))
   
   mfx_order <- c(mfx_order, names(var_W[var_W == 'numeric']))
-  
-  if (vcov){
-    for (k in 1:K){
-      t_stat <- all_mfx[[paste0('diff.', k)]] / sqrt(all_mfx[[paste0('var.', k)]])
-      sig <- abs(t_stat) > 1.96
-      all_mfx[[paste0('t.', k)]] <- t_stat
-      all_mfx[[paste0('sig.', k)]] <- as.numeric(sig)
-    }
+
+  if (abs_diff){
+    # Already in long format...
   }else{
-    for (k in 1:K){
-      all_mfx[[paste0('t.', k)]] <- NA
-      all_mfx[[paste0('sig.', k)]] <- NA
+    if (vcov){
+      for (k in 1:K){
+        t_stat <- all_mfx[[paste0('diff.', k)]] / sqrt(all_mfx[[paste0('var.', k)]])
+        sig <- abs(t_stat) > 1.96
+        all_mfx[[paste0('t.', k)]] <- t_stat
+        all_mfx[[paste0('sig.', k)]] <- as.numeric(sig)
+      }
+    }else{
+      for (k in 1:K){
+        all_mfx[[paste0('t.', k)]] <- NA
+        all_mfx[[paste0('sig.', k)]] <- NA
+      }
     }
+    # Old version that uses reshape2
+    # vis_mfx <- melt(all_mfx, id.vars = c('type', 'variable'),
+    #   measure.vars = grep(names(all_mfx), pattern='^(t$|sig|changed|baseline)'),
+    #   variable.name = 'mfx_type')
+    # vis_mfx$group <- gsub(vis_mfx$mfx_type, pattern='[^0-9]+', perl = T, replacement = 'Group ')
+    # vis_mfx$mfx_type <- gsub(vis_mfx$mfx_type, pattern='[\\.0-9]+', replacement ='')
+    # vis_mfx <- dcast(vis_mfx, group + variable ~ mfx_type, value.var = 'value')
+    vis_mfx <- do.call('rbind', lapply(grep(names(all_mfx), pattern='^(t$|sig|changed|baseline)'), FUN=function(i){
+      data.frame(type = all_mfx$type,
+                 variable = all_mfx$variable,
+                 mfx_type = names(all_mfx)[i],
+                 value = all_mfx[,i],
+                 stringsAsFactors = FALSE)
+    }))
+    vis_mfx$group <- gsub(vis_mfx$mfx_type, pattern='[^0-9]+', perl = T, replacement = 'Group ')
+    vis_mfx$mfx_type <- gsub(vis_mfx$mfx_type, pattern='[\\.0-9]+', replacement ='')
+    joint_id <- paste(vis_mfx$group, '@@@@', vis_mfx$variable)
+    int_vis <- split(vis_mfx[, c('value', 'mfx_type')], joint_id)
+    vis_mfx <- do.call('rbind', lapply(int_vis, FUN=function(i){
+      dat <- data.frame(x = t(i[,1]))
+      names(dat) <- i[,2]
+      return(dat)
+    }))
+    vis_mfx[,c('group', 'variable')] <- do.call('rbind', strsplit(names(int_vis), ' @@@@ '))
+    rownames(vis_mfx) <- NULL
+    vis_mfx <- vis_mfx[, c('group', 'variable', 'baseline', 'changed', 'sig')]
+    vis_mfx$fmt_name <- factor(vis_mfx$variable, levels = mfx_order)
+    vis_mfx$sig <- factor(vis_mfx$sig)
   }
   
-  vis_mfx <- reshape2::melt(all_mfx, id.vars = c('type', 'variable'), 
-                            measure.vars = grep(names(all_mfx), pattern='^(t$|sig|changed|baseline)'),
-                            variable.name = 'mfx_type')
-  vis_mfx$cluster <- gsub(vis_mfx$mfx_type, pattern='[^0-9]+', perl = T, replacement = 'Cluster ')
-  vis_mfx$mfx_type <- gsub(vis_mfx$mfx_type, pattern='[\\.0-9]+', replacement ='')
-  # Keep for both if K = 2
-  # if (K %in% 1:2){
-  #   vis_mfx <- vis_mfx[vis_mfx$cluster == 'Cluster 1',]
-  # }
-  vis_mfx <- dcast(vis_mfx, cluster + variable ~ mfx_type, value.var = 'value')
-  vis_mfx$fmt_name <- factor(vis_mfx$variable, levels = mfx_order)
-  vis_mfx$sig <- factor(vis_mfx$sig)
-  g <- ggplot(vis_mfx, aes_string(alpha = 'sig')) + 
-    geom_point(aes_string(x='fmt_name',y='baseline')) +
-    geom_segment(aes_string(x='fmt_name',xend='variable',y='baseline',yend='changed'),
-                 arrow = arrow(length =unit(0.03, 'npc'))) + 
-    coord_flip() + facet_wrap(~cluster) +
-    theme_bw() + ylab('Posterior Predictive Probability of Cluster Membership') + 
-    xlab('Covariate') +
-    scale_alpha_manual(values = c(0.25, 1), guide = 'none')
+  .data <- NULL
+  if (abs_diff){
+    all_mfx$fmt_name <- factor(all_mfx$variable, levels = mfx_order)
+    vis_mfx <- all_mfx[all_mfx$qoi == 'abs_diff',]
+    vis_mfx$group <- paste0('Group ', vis_mfx$K)
+    vis_mfx$abs_orig <- abs(vis_mfx$point_estimate_average)
+    g <- ggplot(vis_mfx) + 
+      geom_point(aes(x=.data[['fmt_name']],y=.data[['mean']])) +
+      geom_errorbar(aes(x=.data[['fmt_name']],
+                               ymin=.data[['ll']],
+                               ymax=.data[['ul']])) +
+      coord_flip() + facet_wrap(~group) +
+      theme_bw() + ylab('Change in Posterior Predictive Probability of Group Membership') + 
+      xlab('Covariate')  +
+      geom_hline(aes(yintercept=0), linetype='dashed') +
+      geom_point(aes(x=.data[['fmt_name']], y=.data[['abs_orig']]), col = 'red', pch = 8)
+  }else{
+    g <- ggplot(vis_mfx, aes(alpha = .data[['sig']])) + 
+      geom_point(aes(x=.data[['fmt_name']],y=.data[['baseline']])) +
+      geom_segment(aes(x=.data[['fmt_name']],
+                       xend=.data[['variable']],
+                       y=.data[['baseline']],
+                       yend=.data[['changed']]),
+                   arrow = arrow(length =unit(0.03, 'npc'))) + 
+      coord_flip() + facet_wrap(~group) +
+      theme_bw() + ylab('Posterior Predictive Probability of Group Membership') + 
+      xlab('Covariate') +
+      scale_alpha_manual(values = c(0.25, 1), guide = 'none')
+  }
   output <- list(plot = g, data = all_mfx)
   class(output) <- 'FactorHet_vis'
   return(output)
 }
 
-delta_ME_multinom <- function(K, prob_high, prob_low, W_high, W_low, vcov, weights){
+#' @rdname deprecated
+#' @keywords internal
+#' @export
+moderator_AME <- function(...){
+  .Deprecated(new = 'margeff_moderators', old = 'moderator_AME')
+  return(margeff_moderators(...))
+}
+
+delta_ME_multinom <- function(K, 
+  prob_high, prob_low, W_high, W_low, 
+  vcov, weights, absolute = FALSE){
   
   delta_out <- sapply(1:K, FUN=function(k){
-    grad_delta <- do.call('c', lapply(2:K, FUN=function(l){
-      g_high <- colSums(Diagonal(x = weights) %*% Diagonal(x = prob_high[,k] * ((l == k) - prob_high[,l])) %*% W_high)
-      g_low <- colSums(Diagonal(x = weights) %*% Diagonal(x = prob_low[,k] * ((l == k) - prob_low[,l])) %*% W_low)
-      return(g_high - g_low)
-    }))
+    if (absolute){
+      grad_delta <- do.call('c', lapply(2:K, FUN=function(l){
+        g_high <- (Diagonal(x = weights) %*% Diagonal(x = prob_high[,k] * ((l == k) - prob_high[,l])) %*% W_high)
+        g_low <- (Diagonal(x = weights) %*% Diagonal(x = prob_low[,k] * ((l == k) - prob_low[,l])) %*% W_low)
+        g_diff <- colSums(Diagonal(x=sign(prob_high[,k] - prob_low[,k])) %*% (g_high - g_low))
+        return(g_diff)
+      }))
+      
+    }else{
+      grad_delta <- do.call('c', lapply(2:K, FUN=function(l){
+        g_high <- colSums(Diagonal(x = weights) %*% Diagonal(x = prob_high[,k] * ((l == k) - prob_high[,l])) %*% W_high)
+        g_low <- colSums(Diagonal(x = weights) %*% Diagonal(x = prob_low[,k] * ((l == k) - prob_low[,l])) %*% W_low)
+        return(g_high - g_low)
+      }))
+    }
     delta_var <- as.numeric(t(grad_delta) %*% vcov %*% grad_delta)
     return(delta_var)
   })
-  
   return(delta_out)
 }

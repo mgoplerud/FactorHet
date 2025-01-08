@@ -2,41 +2,41 @@
 % Please edit documentation in R/postregression_functions.R
 \name{cjoint_plot}
 \alias{cjoint_plot}
-\title{Plot a FactorHet Object}
+\title{Plot a FactorHet object}
 \usage{
-cjoint_plot(object, baseline = NA)
+cjoint_plot(object, baseline = NA, plot = TRUE)
 }
 \arguments{
-\item{object}{An object from FactorHet or FactorHet_mbo.}
+\item{object}{An object from \code{\link{FactorHet}} or \code{\link{FactorHet_mbo}}.}
 
-\item{baseline}{Default is "NA" and shows all coefficients. Providing a named
-list of baseline levels to difference each main effect from. See help for
-\code{marginal_AME}.}
+\item{baseline}{A specification of baseline levels of each factor. The
+default is \code{NA} and shows all coefficients. The documentation for
+\code{\link{AME}} discusses how a named list could be provided to show the
+difference between coefficients.}
+
+\item{plot}{A logical value as to whether the function should print the plot
+immediately or quietly provide an object containing the plot and data. The
+default is \code{TRUE}.}
 }
 \value{
-\item{plot}{The ggplot2 visualization of the marginal effects.}
+\item{plot}{The ggplot2 visualization of the coefficients.}
 \item{data}{The data used to create the ggplot2 visualization.}
 }
 \description{
-Plots the regression coefficients beta_k from a fitted FactorHet object for
-main effects only. Use \code{marginal_AME} to calculate average marginal effects
-on a predicted probability scale.
+Plots the coefficients \eqn{\beta_k} from a fitted FactorHet object for the
+main effects only. Use \code{\link{AME}} to calculate average marginal effects. This
+provides a fast method to examine the impact of a factor.
 }
 \examples{
-data(immigration)
-# Induce "fake" randomization restriction
-immigration$joint_id <- paste(immigration$CaseID, immigration$contest_no)
-remove_profiles <- subset(immigration, Plans == 'No plans' & Ed == 'GradDeg')
-immigration <- subset(immigration, !(joint_id \%in\% remove_profiles$joint_id))
-# Fit with one cluster and limited regularization for example only
+# Fit with one group and limited regularization for example only
 # Ignore conjoint structure for simplicity
-fit_MBO <- FactorHet(Chosen_Immigrant ~ Plans + Ed + Country,
-  design = immigration, lambda = 1e-4,
+fit <- FactorHet(Chosen_Immigrant ~ Plans + Ed + Country,
+  design = immigration, lambda = 1e-2,
   K = 1, group = ~ CaseID, task = ~ contest_no, choice_order = ~ choice_id)
 # Plot the raw coefficients
-cjoint_plot(fit_MBO)
+cjoint_plot(fit)
 
 }
 \seealso{
-\link{marginal_AME}
+\link{AME}
 }

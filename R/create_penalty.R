@@ -60,7 +60,7 @@ create_penalty <- function(factor_levels, make_interactions,
 
   #Get the probability of assignment to treatment for each
   #pair of levels: List for independently randomized
-  if (!inherits(treatment_probs, "list")){
+  if (!inherits(treatment_probs, 'list')){
     stop('Non-independent arms not implemented.')
   }
   
@@ -205,7 +205,9 @@ create_penalty <- function(factor_levels, make_interactions,
 
 
 # Compare the difference between levels of factor and their interactions
-prepare_fusion <- function(factor_levels, term_position, coef_names, beta, simplify = TRUE){
+prepare_fusion <- function(factor_levels, term_position, coef_names, beta, 
+                           ordered_factors,
+                           simplify = TRUE){
   F_list <- list()
   J <- length(factor_levels)
   J_names <- names(factor_levels)
@@ -215,7 +217,14 @@ prepare_fusion <- function(factor_levels, term_position, coef_names, beta, simpl
     F_j <- list()
     #For each factor, loop over all levels.
     for (p_l in 1:length(levels_j)){
-      for (p_m in 1:p_l){
+      # If levels are UNordered, fuse all pairwise combinations
+      if (!ordered_factors[J_names[j]]){
+        loop_range <- 1:p_l
+      }else{
+        # If levels are ordered, fuse adjacent categories.
+        loop_range <- max(1, p_l-1):min(p_l, p_l+1)
+      }
+      for (p_m in loop_range){
         if (p_m != p_l){
           
           l_l <- levels_j[p_l]
@@ -387,7 +396,7 @@ create_standard_group <- function(D_list, weight_dlist){
   names(cum_obs) <- names(D_list)
   max_obs <- sum(n_obs)
   
-  group_D <- mapply(cum_obs, D_list, SIMPLIFY = FALSE, FUN=function(ci, D_i){
+  group_F <- mapply(cum_obs, D_list, SIMPLIFY = FALSE, FUN=function(ci, D_i){
     n_obs_i <- sapply(D_i, nrow) 
     names_i <- names(D_i)
     cum_obs_i <- cumsum(c(0, n_obs_i))
@@ -405,7 +414,27 @@ create_standard_group <- function(D_list, weight_dlist){
     })
     return(out_matrix)
   })
-  return(group_D)
+  
+  group_D <- mapply(cum_obs, D_list, SIMPLIFY = FALSE, FUN=function(ci, D_i){
+    n_obs_i <- sapply(D_i, nrow) 
+    names_i <- names(D_i)
+    cum_obs_i <- cumsum(c(0, n_obs_i))
+    cum_obs_i <- cum_obs_i[-length(cum_obs_i)] + ci
+    names(cum_obs_i) <- names_i
+    out_matrix <- mapply(cum_obs_i, D_i, SIMPLIFY = FALSE, FUN=function(ci, Di_l){
+      ci_r <- ci + seq_len(nrow(Di_l))
+      if (!weight_dlist){
+        ci_x <- 1
+      }else{
+        ci_x <- rep(1, length(ci_r))
+        ci_x[1] <- length(ci_r)
+      }
+      sparseMatrix(i = 1:length(ci_r), j = ci_r, x = ci_x, dims = c(length(ci_r), max_obs))
+    })
+    return(out_matrix)
+  })
+  
+  return(list("F" = group_F, "D" = group_D))
 }
 
 create_log_penalty <- function(D_list, weight_dlist){
