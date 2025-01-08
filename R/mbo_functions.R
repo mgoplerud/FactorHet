@@ -85,10 +85,10 @@ FactorHet_mbo <- function(formula, design, K, moderator = NULL, weights = NULL,
 #'   be installed.
 #' @param mbo_noisy A logical value for whether to treat the objective function
 #'   as "noisy" for purposes of model-based optimization. The default is
-#'   \code{TRUE}. This vignette, \code{vignette("noisy_optimization", package =
-#'   "mlrMBO")}, provides more details. The criterion function is not, in fact,
-#'   noisy but this option often performs better for a non-smooth function. It
-#'   uses \code{link[mlrMBO]{crit.eqi}} instead of \code{link[mlrMBO]{crit.ei}}.
+#'   \code{TRUE}. The \code{"noisy_optimization"} vignette from \code{mlrMBO}
+#'   provides more details. The criterion function is not, in fact, noisy but
+#'   this option often performs better for a non-smooth function. It uses
+#'   \code{link[mlrMBO]{crit.eqi}} instead of \code{link[mlrMBO]{crit.ei}}.
 #' @param final_method A character argument that determines how the final
 #'   regularization parameter should be selected. The default is
 #'   \code{"best_predicted"} that uses the regularization parameter that is

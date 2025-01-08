@@ -195,7 +195,8 @@ default is 5.}
 \item{tau_truncate}{A numerical value to either truncate \eqn{E[1/\tau^2]}
 (i.e. set maximum \eqn{E[1/\tau^2]} in the E-Step for updating \eqn{\beta})
 if \code{tau_method = "clip"} or a threshold by which to declare that two
-levels are fused if \code{tau_method="nullspace"}. The default is 1e6.}
+levels are fused if 
+\code{tau_method="nullspace"}. The default is 1e6.}
 
 \item{debug}{A logical value for whether the algorithm should be debugged.
 The default is \code{FALSE}. In particular, it will verify that the

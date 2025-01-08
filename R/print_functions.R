@@ -7,8 +7,8 @@
 #' @param object Object fit using \code{\link{FactorHet}} or \code{\link{FactorHet_mbo}}.
 #' @param x Object fit using \code{\link{FactorHet}} or \code{\link{FactorHet_mbo}}.
 #' @param y Not used; required to maintain compatibility.
-#' @param ... Optional arguments; only used by \code{plot.FactorHet} to pass
-#'   arguments to \code{\link{cjoint_plot}}.
+#' @param ... Optional arguments; only used by \code{plot.FactorHet} with
+#'   \code{\link{cjoint_plot}}.
 #' @param show_interactions Used by \code{summary.FactorHet}; indicates whether the
 #'   interaction terms be shown. Default \code{FALSE}. See "Details" for more
 #'   discussion.

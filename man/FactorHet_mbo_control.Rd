@@ -59,10 +59,10 @@ after initialization. The default is 11.}
 
 \item{mbo_noisy}{A logical value for whether to treat the objective function
 as "noisy" for purposes of model-based optimization. The default is
-\code{TRUE}. This vignette, \code{vignette("noisy_optimization", package =
-"mlrMBO")}, provides more details. The criterion function is not, in fact,
-noisy but this option often performs better for a non-smooth function. It
-uses \code{link[mlrMBO]{crit.eqi}} instead of \code{link[mlrMBO]{crit.ei}}.}
+\code{TRUE}. The \code{"noisy_optimization"} vignette from \code{mlrMBO}
+provides more details. The criterion function is not, in fact, noisy but
+this option often performs better for a non-smooth function. It uses
+\code{link[mlrMBO]{crit.eqi}} instead of \code{link[mlrMBO]{crit.ei}}.}
 
 \item{criterion}{A character value of the criterion to minimize. Options are
 \code{"BIC"} (default), \code{"AIC"}, \code{"GCV"}, or \code{"BIC_group"}.

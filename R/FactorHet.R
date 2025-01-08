@@ -73,8 +73,8 @@
 #'   
 #'   \bold{Ridge Regression:} While more experimental, ridge regression can be
 #'   estimated by setting \code{lambda = 0} (in \code{FactorHet}) and then
-#'   setting \code{prior_var_beta} in \code{\link{FactorHet_control}} or by using
-#'   \code{FactorHet_mbo} and setting \code{mbo_type = "ridge"}.
+#'   setting \code{prior_var_beta} in \code{\link{FactorHet_control}} or by
+#'   using \code{FactorHet_mbo} and setting \code{mbo_type = "ridge"}.
 #'   
 #'   \bold{Moderators:} Moderators can be provided via the \code{moderator}
 #'   argument. These are important when \code{K > 1} for ensuring the stability

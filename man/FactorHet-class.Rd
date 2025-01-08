@@ -45,8 +45,8 @@ posterior_FactorHet(object)
 
 \item{y}{Not used; required to maintain compatibility.}
 
-\item{...}{Optional arguments; only used by \code{plot.FactorHet} to pass
-arguments to \code{\link{cjoint_plot}}.}
+\item{...}{Optional arguments; only used by \code{plot.FactorHet} with
+\code{\link{cjoint_plot}}.}
 
 \item{fusion.tolerance}{Threshold at which to declare levels fused}
 

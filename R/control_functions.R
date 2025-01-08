@@ -130,7 +130,8 @@
 #' @param tau_truncate A numerical value to either truncate \eqn{E[1/\tau^2]}
 #'   (i.e. set maximum \eqn{E[1/\tau^2]} in the E-Step for updating \eqn{\beta})
 #'   if \code{tau_method = "clip"} or a threshold by which to declare that two
-#'   levels are fused if \code{tau_method="nullspace"}. The default is 1e6.
+#'   levels are fused if 
+#'   \code{tau_method="nullspace"}. The default is 1e6.
 #' @param tau_stabilization An integer value of the number of steps to perform
 #'   with \code{tau_method="clip"} before using the provided setting. The
 #'   default is 5.
