@@ -41,9 +41,11 @@ test_that('Confim working post regression functions (moderator)', {
   
   est_mod_eff <- tryCatch(margeff_moderators(est_simple), error = function(e){NULL})
   est_mod_post <- tryCatch(posterior_FactorHet(est_simple), error = function(e){NULL})
+  est_posterior <- tryCatch(posterior_by_moderators(est_simple), error = function(e){NULL})
   
   expect_false(is.null(est_mod_eff))  
   expect_false(is.null(est_mod_post)) 
+  expect_false(is.null(est_posterior)) 
   
   expect_equivalent(est_mod_post$compare$post.predict, 
                     est_simple$posterior$posterior_predictive$group_1)

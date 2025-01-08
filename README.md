@@ -4,7 +4,7 @@ This package estimates heterogeneous effects in factorial and conjoint experimen
 
 The core method is a Bayesian regularized finite mixture-of-experts where moderators can affect an individual's probability of cluster membership and a sparsity-inducing prior fuses together levels of each factor in each cluster while respecting ANOVA-style sum-to-zero constraints described in [Egami and Imai (2019)](https://imai.fas.harvard.edu/research/files/int.pdf). The posterior mode is found using an AECM algorithm with a number of techniques to accelerate convergence. Approximate quantification of uncertainty is provided by examining the Hessian of the log-posterior. Additional details are explained in the paper and (briefly) in the package documentation.
 
-It can be installed from CRAN or the most-to-update version can be installed using `devtools`.
+It can be installed from CRAN or the most-to-update version can be installed using `devtools`. Note, macOS users may need to ensure that XQuartz is installed; please see information from CRAN ([here](https://cran.r-project.org/bin/macosx/)) for more details.
 
 ```
 # CRAN
@@ -43,3 +43,5 @@ The effects of moderators on cluster membership can be analyzed using two key fu
 posterior_by_moderators(fit_FH)
 margeff_moderators(fit_FH)
 ```
+
+Some function names (e.g., `AME` and `margeff_moderators`) have been changed for clarity from an older verison of those package. Those functions should still run but will throw a warning and should be updated in existing code.

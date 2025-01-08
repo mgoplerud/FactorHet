@@ -65,7 +65,7 @@ test_that('Check that with ONLY intercept, model runs and gives right DF', {
   expect_equal(est_simple$information_criterion$df, rep(1))
   
   est_simple <- FactorHet(formula = y ~ state + letter, design = dta, 
-    K = 2, lambda = 10, 
+    K = 2, lambda = 10^5, 
     initialize = FactorHet_init(nrep = 1),
     control = FactorHet_control(iterations = NITER, single_intercept = TRUE))
   
@@ -75,9 +75,9 @@ test_that('Check that with ONLY intercept, model runs and gives right DF', {
   expect_equal(est_simple$information_criterion$df, rep(2,1))
 
   est_simple <- FactorHet(formula = y ~ state + letter, design = dta, 
-    K = 2, lambda = 10, 
+    K = 2, lambda = 10^5, 
     initialize = FactorHet_init(nrep = 1),
-    control = FactorHet_control(iterations = NITER, single_intercept = FALSE))
+    control = FactorHet_control(iterations = NITER, init_method = 'random_pi', single_intercept = FALSE))
   expect_gte(min(diff(logLik(est_simple, 'log_posterior_seq'))), -1e-7)
   expect_equal(est_simple$information_criterion$df_beta, rep(2,1))
   expect_equal(est_simple$information_criterion$df, rep(3,1))
