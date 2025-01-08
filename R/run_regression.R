@@ -1,21 +1,25 @@
 # Internal function for fitting analysis
 # Only called via FactorHet; see that documentation
-#' @import tictoc rlang Matrix
+#' @import Matrix
 #' @importFrom stats rexp var runif rnorm
-#' @importFrom dplyr select
 #' @importFrom utils combn
 #' @importFrom methods as
 EM_analysis <- function(formula, design, K, lambda, weights = NULL,
     moderator = NULL, group = NULL, task = NULL, choice_order = NULL,
     control = FactorHet_control()){
   
-  tic.clear()
-  tic.clearlog()
-  tic('Initial Preparation')
+  has_tictoc <- requireNamespace('tictoc', quietly = TRUE)
+  if (has_tictoc){
+    tic <- tictoc::tic
+    toc <- tictoc::toc
+    tictoc::tic.clear()
+    tictoc::tic.clearlog()
+    tic('Initial Preparation')
+  }else{
+    tic <- function(...){NULL}
+    toc <- function(...){NULL}
+  }
   
-  group <- enquo(group)
-  task <- enquo(task)
-  choice_order <- enquo(choice_order)
   formula_weight <- paste(as.character(weights), collapse = ' ')
   
   if (!inherits(control, 'FactorHet_control')){
@@ -47,13 +51,14 @@ EM_analysis <- function(formula, design, K, lambda, weights = NULL,
   beta_cg_it <- control$beta_cg_it
   
   tau_method <- control$tau_method
+  force_reset <- control$force_reset
   tau_stabilization <- control$tau_stabilization
-  tau_equality_threshold <- control$tau_equality_threshold
-  
+
   single_intercept <- control$single_intercept
   
   do_SQUAREM <- control$do_SQUAREM
-
+  step_SQUAREM <- control$step_SQUAREM
+  
   quiet_tictoc <- control$quiet_tictoc
 
   adaptive_weight <- control$adaptive_weight
@@ -131,7 +136,6 @@ EM_analysis <- function(formula, design, K, lambda, weights = NULL,
       if (K == 1){message('Provided moderators are ignored since K = 1.')}
       moderator <- ~ 1
     }
-    
     tic('Prep Moderator')
     concom_W <- create_moderator(design = design, moderator = moderator, group = group, unique_group = unique_group)
     W <- concom_W$W
@@ -161,18 +165,18 @@ EM_analysis <- function(formula, design, K, lambda, weights = NULL,
     }
     
     tic('Prepare Design')
-    factor_names <- enquo(factor_names)
     
     #From the design, get the level of each factor
-    factor_levels <- lapply(dplyr::select(.data = as.data.frame(design), !! factor_names), FUN=function(i){
+    # factor_names <- enquo(factor_names)
+    # factor_levels <- select(.data = as.data.frame(design), !! factor_names)
+    factor_levels <- lapply(as.data.frame(design)[,factor_names], FUN=function(i){
       if (any(class(i) == 'factor')){
         return(levels(i))
       }else{
         return(sort(unique(i)))
       }
     })
-    
-    ordered_factors <- sapply(dplyr::select(.data = as.data.frame(design), !! factor_names), FUN=function(i){
+    ordered_factors <- sapply(as.data.frame(design)[,factor_names], FUN=function(i){
       is.ordered(i)
     })
     
@@ -231,13 +235,13 @@ EM_analysis <- function(formula, design, K, lambda, weights = NULL,
     coef_names <- penalty_for_regression$coef
     
     
-    #Clip any small values below 1e-15 to be zero
-    clip_tiny <- floor(-log(.Machine$double.eps)/log(10))
-    if (clip_tiny < 15){
-      clip_tiny <- 15
+    #Clip any small values below 1e-7 to be zero
+    clip_tiny <- floor(-1/2 * log(.Machine$double.eps)/log(10))
+    if (clip_tiny < 7){
+      clip_tiny <- 7
     }
     tic('Prepare Forced Choice')
-    basis_M <- drop0(zapsmall(basis_M, clip_tiny))
+    basis_M <- drop0(absolute_zap(basis_M, clip_tiny))
     #If choice order provided, DO FORCED CHOICE
     
     if (!is.null(choice_order)){
@@ -302,7 +306,15 @@ EM_analysis <- function(formula, design, K, lambda, weights = NULL,
   weights_W <- Diagonal(x = 1/colSums(group_mapping)) %*% t(group_mapping) %*% weights
   weights_sq_W <- Diagonal(x = 1/colSums(group_mapping)) %*% t(group_mapping) %*% weights^2
   if (any(abs(as.vector(weights_sq_W - weights_W^2)) > sqrt(.Machine$double.eps))){
-    stop('weights are not constant within group (e.g. person) across tasks.')
+    dis_amount <- max(abs(as.vector(weights_sq_W - weights_W^2)))
+    msg <- paste(
+      c(
+        'weights are not constant within group (e.g. person) across tasks.',
+        paste0('disagreement amount is ', round(dis_amount, 7)),
+        'Please contact maintainer and report bug.'
+      ), collapse = '\n'
+    )
+    stop(msg)
   }
   std_weights <- 1/sum(weights_W) * nrow(W)
   weights_W <- weights_W * std_weights
@@ -328,12 +340,18 @@ EM_analysis <- function(formula, design, K, lambda, weights = NULL,
   orig_lambda <- lambda
   lambda <- control$lambda_scale(lambda, nrow(design))
   
+  make_X_refit <- list(
+    add_col = function(X,M){X %*% M},
+    add_args = list(M = basis_M)
+  )
+  
   if (log_method == 'standard'){
     
     #Project into NULLSPACE for regression
     
+    
     X <- X %*% basis_M  
-    p_X <- ncol(X)
+    p_orig <- p_X <- ncol(X)
     
     if (!all(X[,ncol(X)] == 1)){
       stop('Weird alignemnt issue with INTERCEPT not being last column after project. Examine X * basis_M')
@@ -342,6 +360,7 @@ EM_analysis <- function(formula, design, K, lambda, weights = NULL,
     tic('Proj F')
     
     Fmatrix_orig <- Fmatrix
+    Dlist_orig <- Dlist
     
     if (!isTRUE(control$skip_check_rank)){
       # Faster than inbuilt.
@@ -354,6 +373,12 @@ EM_analysis <- function(formula, design, K, lambda, weights = NULL,
       }
     }
     
+    Dlist <- lapply(Dlist, FUN=function(D.j){
+      lapply(D.j, FUN=function(l){
+        drop0(absolute_zap(l %*% basis_M, clip_tiny))
+      })
+    })
+    
     Fmatrix <- lapply(Fmatrix, FUN=function(F.j){
       lapply(F.j, FUN=function(l){
         t(basis_M) %*% l %*% basis_M
@@ -361,8 +386,7 @@ EM_analysis <- function(formula, design, K, lambda, weights = NULL,
     })
     Fmatrix <- lapply(Fmatrix, FUN=function(F.j){
       lapply(F.j, FUN=function(l){
-        l <- drop0(zapsmall(l, clip_tiny))
-        #l@x <- round(l@x, 10)
+        l <- drop0(absolute_zap(l, clip_tiny))
         return(l)
       })
     })
@@ -392,6 +416,7 @@ EM_analysis <- function(formula, design, K, lambda, weights = NULL,
     )
     raw_F$dim <- dim(Fmatrix[[1]][[1]])
 
+    
     toc(quiet = quiet_tictoc, log = TRUE)
   }else if (grepl(log_method, pattern='^log_')){
     
@@ -429,7 +454,7 @@ EM_analysis <- function(formula, design, K, lambda, weights = NULL,
     }
     
     basis_aug <- calculate_nullspace_basis(aug_restrictions)
-    basis_aug <- drop0(zapsmall(basis_aug, clip_tiny))
+    basis_aug <- drop0(absolute_zap(basis_aug, clip_tiny))
 
     p_orig <- ncol(X)
     
@@ -438,26 +463,26 @@ EM_analysis <- function(formula, design, K, lambda, weights = NULL,
       M_ginv <- rbind(Diagonal(n = ncol(D)), D)
       M_ginv <- solve(crossprod(M_ginv), t(M_ginv))
       M_ginv <- cbind(M_ginv, M_ginv[,p_orig + copy_main_D])
+      proj_X <- drop0(absolute_zap(M_ginv %*% basis_aug, clip_tiny))
       
       if (!do_BR){
-        proj_X <- drop0(zapsmall(M_ginv %*% basis_aug, 15))
-        X <- drop0(zapsmall(X %*% proj_X, clip_tiny))
+        X <- drop0(absolute_zap(X %*% proj_X, clip_tiny))
       }else{
-        X <- drop0(zapsmall(X %*% M_ginv, clip_tiny))
+        X <- drop0(absolute_zap(X %*% M_ginv, clip_tiny))
       }
-      
       
     }else if (log_method == 'log_0'){#Z = [X, 0]
       
       X <- cbind(X, sparseMatrix(i=1,j=1,x=0, dims = c(nrow(X), length(copy_main_D) + nrow(D)))) 
       if (!do_BR){
-        X <- drop0(zapsmall(X %*% basis_aug, clip_tiny))
+        X <- drop0(absolute_zap(X %*% basis_aug, clip_tiny))
       }
+
     }else if (log_method == 'log_random'){
       
       M <- rbind(Diagonal(n = ncol(D)), D)
       M_ginv <- solve(crossprod(M), t(M))
-      part_X1 <- drop0(zapsmall(X %*% M_ginv, clip_tiny))
+      part_X1 <- drop0(absolute_zap(X %*% M_ginv, clip_tiny))
       proj_M <- Diagonal(n = nrow(M)) - M %*% M_ginv
       part_X2 <- rsparsematrix(nrow = nrow(X), ncol = ncol(proj_M), density = 0.1) %*% t(proj_M)
       part_X2[,1] <- 0
@@ -466,7 +491,7 @@ EM_analysis <- function(formula, design, K, lambda, weights = NULL,
       X <- cbind(X, X[ , p_orig + copy_main_D])
       
       if (!do_BR){
-        X <- drop0(zapsmall(X %*% basis_aug))
+        X <- drop0(absolute_zap(X %*% basis_aug, clip_tiny))
       }
       
       rm(part_X1, part_X2)
@@ -492,7 +517,7 @@ EM_analysis <- function(formula, design, K, lambda, weights = NULL,
       # stopifnot(length(setdiff(which(v == 1), which(weight_group[copy_main_D] == weight_duplicated))) == 0)
       
       X <- X %*% basis_aug
-      X <- drop0(zapsmall(X, clip_tiny))
+      X <- drop0(absolute_zap(X, clip_tiny))
     }
     
     basis_M <- basis_aug
@@ -505,19 +530,52 @@ EM_analysis <- function(formula, design, K, lambda, weights = NULL,
     tic('Proj F')
     
     Fmatrix_orig <- Fmatrix
+    Dlist_orig <- Dlist
     
-    Fmatrix <- create_standard_group(Dlist, weight_dlist = weight_dlist)
+    tmp_group <- create_standard_group(Dlist, weight_dlist = weight_dlist)
+    Fmatrix <- tmp_group[['F']]
+    Dlist <- tmp_group[['D']]
+    rm(tmp_group); gc()
+    
+    # Confirm number of rows are the same in Dlist and Dlist_orig
+    checksum_1 <- (
+      identical(
+        unlist(lapply(Dlist_orig, FUN=function(i){sapply(i, nrow)})),
+        unlist(lapply(Dlist, FUN=function(i){sapply(i, nrow)})))
+    )
+    checksum_2 <- (max(mapply(Fmatrix, Dlist, FUN=function(F.j, D.j){
+      max(mapply(F.j, D.j, FUN=function(i,j){
+        max(abs(i-crossprod(j)))
+      }))}))) < sqrt(.Machine$double.eps)
+    
+    if (checksum_1 != TRUE | checksum_2 != TRUE){
+      stop('Error in expanding groups; contact maintainer about bug.')
+    }
     #Get the standard group penalties
     if (length(copy_main_D) != 0){
       extra_bdiag <- sparseMatrix(i=1,j=1,x=0,dims= rep(length(copy_main_D), 2))
     }else{
       extra_bdiag <- matrix(nrow = 0, ncol = 0)
     }
+    
     Fmatrix <- lapply(Fmatrix, FUN=function(F.j){
       lapply(F.j, FUN=function(l){
         bdiag(sparseMatrix(i=1,j=1,x=0, dims = c(p_orig, p_orig)),
               l,
               extra_bdiag)
+      })
+    })
+    
+    Dlist <- lapply(Dlist, FUN=function(D.j){
+      lapply(D.j, FUN=function(l){
+        if (length(copy_main_D) > 0){
+          drop0(cbind(sparseMatrix(i=1,j=1,x=0,dims = c(nrow(l), p_orig)),
+                      l,
+                      sparseMatrix(i=1,j=1,x=0,dims=c(nrow(l), length(copy_main_D)))))
+        }else{
+          drop0(cbind(sparseMatrix(i=1,j=1,x=0,dims = c(nrow(l), p_orig)),
+                      l))
+        }
       })
     })
     
@@ -529,8 +587,19 @@ EM_analysis <- function(formula, design, K, lambda, weights = NULL,
           bdiag(sparseMatrix(i=1,j=1,x=0,dims=rep(nrow(D) + p_orig,2)),
                 sparseMatrix(i=i,j=i,x=1, dims = rep(length(copy_main_D),2)))
         })))
+      Dlist <- c(Dlist, list('log' = lapply(1:length(copy_main_D),
+        FUN=function(i){
+          sparseMatrix(i=1,j=nrow(D) + p_orig + i,x=1, 
+            dims = c(1, nrow(D) + p_orig + length(copy_main_D)))
+        })))
     }
 
+    Dlist <- lapply(Dlist, FUN=function(D.j){
+      lapply(D.j, FUN=function(l){
+        drop0(absolute_zap(l %*% basis_aug, clip_tiny))
+      })
+    })
+    
     Fmatrix <- lapply(Fmatrix, FUN=function(F.j){
       lapply(F.j, FUN=function(l){
         t(basis_aug) %*% l %*% basis_aug
@@ -539,12 +608,21 @@ EM_analysis <- function(formula, design, K, lambda, weights = NULL,
     
     Fmatrix <- lapply(Fmatrix, FUN=function(F.j){
       lapply(F.j, FUN=function(l){
-        l <- drop0(zapsmall(l, clip_tiny))
-        #l@x <- round(l@x, 10)
+        l <- drop0(absolute_zap(l, clip_tiny))
         return(l)
       })
     })
   
+    # Confirm number of rows are the same in Dlist and Dlist_orig
+    checksum_proj <- (max(mapply(Fmatrix, Dlist, FUN=function(F.j, D.j){
+      max(mapply(F.j, D.j, FUN=function(i,j){
+        max(abs(i-crossprod(j)))
+      }))}))) < sqrt(.Machine$double.eps)
+    
+    if (checksum_proj != TRUE){
+      stop('Error in projecting expanded groups; contact maintainer about bug.')
+    }
+    
     #Get various ranks from \sum_\ell F_\ell and F_\ell
     #to use later in the algorithm.
     rank_F <- Reduce("+", lapply(Fmatrix, FUN=function(k){Reduce("+", k)}))
@@ -569,94 +647,6 @@ EM_analysis <- function(formula, design, K, lambda, weights = NULL,
     raw_F$dim <- dim(Fmatrix[[1]][[1]])
     
     toc(quiet = quiet_tictoc, log = TRUE)
-  }else if (log_method == 'recast_0'){
-
-    D <- do.call('rbind', lapply(Dlist, FUN=function(i){do.call('rbind', i)}))
-    
-    aug_restrictions <- rbind(
-      cbind(D, -Diagonal(n = nrow(D))),
-      cbind(constraint, 
-            drop0(sparseMatrix(i = 1, j = 1, x = 0, 
-                               dims = c(nrow(constraint), nrow(D))))
-      )
-    )
-    
-    aug_X <- cbind(X, sparseMatrix(i = 1, j =1, x = 0, dims = c(nrow(X), ncol = nrow(D))))
-    basis_aug <- calculate_nullspace_basis(aug_restrictions)
-    basis_aug <- drop0(zapsmall(basis_aug, clip_tiny))
-    
-    p_orig <- ncol(X)
-      
-    X <- aug_X %*% basis_aug
-    X <- drop0(zapsmall(X, clip_tiny))
-    
-    basis_M <- basis_aug
-    p_X <- ncol(X)
-    
-    if (!all(X[,ncol(X)] == 1)){
-      stop('Weird alignemnt issue with INTERCEPT not being last column after project. Examine X * basis_M')
-    }
-    
-    tic('Proj F')
-    
-    Fmatrix_orig <- Fmatrix
-    
-    if (!isTRUE(control$skip_check_rank)){
-      # Faster than inbuilt.
-      # if (rankMatrix(X, method = 'qr') != ncol(X)){
-      #   warning('Projected X not flull Rank')
-      # }
-      rank_X <- rank_via_null(X, outer = TRUE)
-      if (rank_X != ncol(X)){
-        warning('Projected X not full rank')
-      }
-    }
-    
-    Fmatrix <- create_standard_group(Dlist, weight_dlist = weight_dlist)
-
-    Fmatrix <- lapply(Fmatrix, FUN=function(F.j){
-      lapply(F.j, FUN=function(l){
-        bdiag(drop0(sparseMatrix(i=1,j=1,x=0, dims = c(p_orig, p_orig))), l)
-      })
-    })
-    Fmatrix <- lapply(Fmatrix, FUN=function(F.j){
-      lapply(F.j, FUN=function(l){
-        t(basis_aug) %*% l %*% basis_aug
-      })
-    })
-    
-    Fmatrix <- lapply(Fmatrix, FUN=function(F.j){
-      lapply(F.j, FUN=function(l){
-        l <- drop0(zapsmall(l, clip_tiny))
-        #l@x <- round(l@x, 10)
-        return(l)
-      })
-    })
-    
-    #Get various ranks from \sum_\ell F_\ell and F_\ell
-    #to use later in the algorithm.
-    rank_F <- Reduce("+", lapply(Fmatrix, FUN=function(k){Reduce("+", k)}))
-    rank_F <- rank_via_null(rank_F)
-    
-    if (rank_F != (ncol(X) - 1)){
-      warning('Rank F is unusual?')
-    }
-    
-    raw_F <- lapply(Fmatrix, FUN=function(F.j){
-      raw_F.j <- lapply(F.j, FUN=function(ell){
-        with(attributes(as(ell, 'dgTMatrix')), cbind(i, j, x))
-      })
-      size_raw.j <- sapply(raw_F.j, nrow)
-      raw_F.j <- do.call('rbind', raw_F.j)
-      return(list(raw = raw_F.j, size = size_raw.j))
-    })
-    raw_F <- list(
-      raw = do.call('rbind', lapply(raw_F, FUN=function(i){i$raw})),
-      size = do.call('c', lapply(raw_F, FUN=function(i){i$size}))
-    )
-    
-    toc(quiet = quiet_tictoc, log = TRUE)
-    
   }
   
   if (lambda == 0){
@@ -673,7 +663,7 @@ EM_analysis <- function(formula, design, K, lambda, weights = NULL,
   if (do_BR){
     
     if (log_method == 'standard'){
-      br_weights <- standardization_weights(D_list = Dlist, X = original_X)
+      br_weights <- standardization_weights(D_list = Dlist_orig, X = original_X)
     }else if (grepl(log_method, pattern='^log')){
       br_weights <- split(c(weight_group, weight_duplicated), rep(names(Fmatrix), lengths(Fmatrix)))
       br_weights <- br_weights[names(Fmatrix)]
@@ -791,7 +781,6 @@ EM_analysis <- function(formula, design, K, lambda, weights = NULL,
 
   if (length(group) != nrow(X)){stop('Group is wrong length')}
 
-
   if (tau_method == 'nullspace'){
     binding_null_basis <- NULL
     # if (log_method == 'standard'){
@@ -819,14 +808,14 @@ EM_analysis <- function(formula, design, K, lambda, weights = NULL,
     beta <- simple_logit(y = y, X = X, iterations = 10, weights = weights,
       beta_method = 'cg', beta_cg_it = 10, prec_ridge = 1)
     beta <- matrix(as.vector(beta))  
-  }else if (inherits(control$init_method, "matrix")){
+  }else if (inherits(control$init_method, 'matrix')){
     stop('init_method must be list or character.')
-  }else if (inherits(control$init_method, "list")){
+  }else if (inherits(control$init_method, 'list')){
     valid_init <- all(c('pi', 'beta', 'group_E.prob', 'phi') %in% names(control$init_method))
     if (!valid_init){
       
       if (!identical('group_E.prob', names(control$init_method))){
-        stop('A list-based initialization must contain either (i) a single data.frame of probabilities for each group/unit with the column names "group" and then "cluster_[0-9]}" or "[0-9]", (ii) a full specification of initialization (uncommon)')
+        stop('A list-based initialization must contain either (i) a single data.frame of probabilities for each group/unit with the column names "group" and then "group_[0-9]}" or "[0-9]", (ii) a full specification of initialization (uncommon)')
       }
       if (length(setdiff(unique_group, control$init_method$group_E.prob$group)) > 0){
         stop('Groups missing from init_method that are in design.')
@@ -835,11 +824,13 @@ EM_analysis <- function(formula, design, K, lambda, weights = NULL,
         stop('Groups found in init_method that are not in design.')
       }
       group_E.prob <- control$init_method$group_E.prob[match(unique_group, control$init_method$group_E.prob$group),]
-      if (inherits(group_E.prob$group, "factor")){
+      if (inherits(group_E.prob$group, 'factor')){
         group_E.prob$group <- as.character(group_E.prob$group)
       }
       stopifnot(identical(group_E.prob$group, unique_group))
-      group_E.prob <- dplyr::select(group_E.prob, -group)
+      
+      # group_E.prob <- select(group_E.prob, -group)
+      group_E.prob <- group_E.prob[, !(names(group_E.prob) == 'group'), drop=F]
       group_E.prob <- as.matrix(group_E.prob)
       rownames(group_E.prob) <- NULL
       
@@ -870,16 +861,9 @@ EM_analysis <- function(formula, design, K, lambda, weights = NULL,
     
   }else if (control$init_method %in% c('mclust')){
     
-    if (requireNamespace('mclust', quietly = TRUE)){
-      hcVVV <- mclust::hcVVV
-      mclust_assign <- as.vector(mclust::hclass(mclust::hc(W, use = "SVD"), G = K))
-      group_E.prob <- as.matrix(sparseMatrix(i = 1:nrow(W), j = mclust_assign, x = 1))
-      obs.E.prob <- apply(group_E.prob, MARGIN = 2, FUN=function(i){as.vector(group_mapping %*% i)})
-    }else{
-      stop("'mclust' must be installed.")
-    }
-    
-    
+    group_E.prob <- mclust_init(W, K)
+    obs.E.prob <- apply(group_E.prob, MARGIN = 2, FUN=function(i){as.vector(group_mapping %*% i)})
+
     beta <- sapply(list_from_cols(obs.E.prob), FUN=function(k){
       simple_logit(y = y[which(k == 1)], X = X[which(k == 1),], iterations = 10, 
           weights = weights[which(k == 1)],
@@ -907,7 +891,7 @@ EM_analysis <- function(formula, design, K, lambda, weights = NULL,
       group_E.prob <- sample(1:K, nrow(W), replace = T)
       group_E.prob <- sparseMatrix(i = 1:nrow(W), j = group_E.prob, x = 1)
     }else{
-      init_k <- suppressWarnings(kmeans(x = scale_W, centers = K, iter.max = 25, nstart = 1500)$cluster)
+      init_k <- suppressWarnings(kmeans(x = scale_W, centers = K, iter.max = 25, nstart = 1500)$group)
       group_E.prob <- as.matrix(sparseMatrix(i = 1:nrow(W), j = init_k, x = 1))
     }
     obs.E.prob <- apply(group_E.prob, MARGIN = 2, FUN=function(i){as.vector(group_mapping %*% i)})
@@ -965,7 +949,7 @@ EM_analysis <- function(formula, design, K, lambda, weights = NULL,
   }else if (control$init_method == 'random_beta'){
     #Random initialization
     beta <- matrix(rnorm(ncol(X) * K), ncol = K)
-    #Generate cluster membership probabilities randomly.
+    #Generate group membership probabilities randomly.
     group_E.prob <- matrix(pi, ncol = K, nrow = n_G, byrow=T)
   }else{stop('Invalid initialization method.')}
 
@@ -979,7 +963,8 @@ EM_analysis <- function(formula, design, K, lambda, weights = NULL,
       update_phi <- update_phi(phi = phi, W = W,
            ridge_phi = ridge_phi, weights_W = weights_W,
            group_E.prob = group_E.prob, K = K,
-           maxit_phi = 10)
+           maxit_mod = maxit_pi, 
+           extra_opt_args = optim_phi_ctrl)
       pi <- update_phi$pi_bar
       phi <- update_phi$phi
     }
@@ -990,7 +975,9 @@ EM_analysis <- function(formula, design, K, lambda, weights = NULL,
   #Set up placeholders for tracking progress of algorithm.
   old.beta <- beta
   old.beta[,] <- -Inf
+  old.lp <- -Inf
   running_ll <- rep(-Inf, 3)
+  store_moderator <- rep(NA, iterations)
   store_ll <- matrix(nrow = iterations, ncol = 3)
   store_beta <- array(NA, dim = c(iterations, nrow(beta), K))
   
@@ -1003,10 +990,12 @@ EM_analysis <- function(formula, design, K, lambda, weights = NULL,
     SQUAREM_counter <- 0
     SQUAREM_list <- list()
     SQUAREM_backtrack <- control$backtrack_SQUAREM
-    SQUAREM_track <- matrix(NA, nrow = iterations, ncol = 2)
+    SQUAREM_track <- matrix(NA, nrow = iterations, ncol = 3)
   }else{
     SQUAREM_track <- NULL
   }
+  
+  y <- as.numeric(y)
   
   for (it in 1:iterations){
     
@@ -1043,7 +1032,7 @@ EM_analysis <- function(formula, design, K, lambda, weights = NULL,
         
         #Clip E[1/tau^2_k] at big # (1e10) to prevent numerical instability
         #When tau_method = 'nullspace', only relevant for initial stabilization steps
-        #as tau_equality_threshold governs when two levels are fused.
+        #as tau_truncate governs when two levels are fused.
         
         E.tau <- clip_Etau(E.tau, threshold = tau_truncate)
         toc(quiet = quiet_tictoc, log = TRUE)
@@ -1062,6 +1051,7 @@ EM_analysis <- function(formula, design, K, lambda, weights = NULL,
       
       #Get E[\sum_{l} F_l / tau^2_{l,r}] = \sum_l F_l * E[1/tau^2_{l,r}]
       tic('Prepare Ridge')
+      use_clip <- lambda == 0 | tau_method == 'clip' | it < tau_stabilization
       if (lambda == 0){#if lambda = 0, add slight ridge stabilization
         #Create a ridge prior on the UNTRANSFORMED space and then project
         #into the nullspace
@@ -1071,7 +1061,7 @@ EM_analysis <- function(formula, design, K, lambda, weights = NULL,
           ridge_beta <- c(0, rep(ridge_beta, nrow(basis_M) - 1))
 
           ridge_beta <- t(basis_M) %*% sparse_diag(ridge_beta) %*% basis_M
-          ridge_beta <- drop0(zapsmall(ridge_beta, clip_tiny))
+          ridge_beta <- drop0(absolute_zap(ridge_beta, clip_tiny))
           ridge_beta <- as(ridge_beta, 'dgCMatrix')
           raw.E.ridge <- lapply(1:K, FUN=function(i){ridge_beta})
           
@@ -1082,20 +1072,9 @@ EM_analysis <- function(formula, design, K, lambda, weights = NULL,
         })
 
       }else{
-        E.ridge <- list()
-        for (k in 1:K){#For each cluster
-            #Sum over factors j \in 1....J
-            E.ridge[[k]] <- make_ridge(E.tauk = E.tau[[k]], raw_F = raw_F, method = 'raw')
-            
-            # ##Checksum to make sure "raw method works"
-            # ridge_2 <- Reduce('+', mapply(E.tau[[k]], Fmatrix, SIMPLIFY = FALSE, FUN=function(etau, F.j){
-            #   #Sum over the L (l) F matrices for each factor.
-            #   ridge.j <- Reduce('+', mapply(etau[,1], F.j, SIMPLIFY = FALSE, FUN=function(etau.l, l){
-            #     etau.l * l
-            #   }))
-            # }))
-            # stopifnot(all.equal(ridge_2, E.ridge[[k]]))
-        }
+        E.ridge <- lapply(E.tau, FUN=function(i){
+          make_ridge(E.tauk = i, raw_F = raw_F, method = 'raw')
+        })
       }
       toc(quiet = quiet_tictoc, log = TRUE)
       
@@ -1115,18 +1094,18 @@ EM_analysis <- function(formula, design, K, lambda, weights = NULL,
       #####M-Step#####
       ###Update Beta
       #Temporary to freeze E[1/tau^2_{l,r}] to check performance
-      #E.ridge <- lapply(E.ridge, FUN=function(i){Diagonal(x = rep(1/25, ncol(i)))})
       tic('Update Beta')
       old_beta <- beta
       if (it == 1){#Create large blocked X for each later iteration
         if (single_intercept){
-          blocked_X <- cbind(1, kronecker(diag(K), X[,-ncol(X)]))
+          blocked_X <- cbind(1, kronecker(Diagonal(n=K), X[,-ncol(X)]))
         }else{
-          blocked_X <- kronecker(diag(K), X)
+          blocked_X <- kronecker(Diagonal(n=K), X)
         }
       }
-      
-      if (lambda == 0 | tau_method == 'clip' | it < tau_stabilization){
+
+      if (use_clip){
+        
         if (debug){message('.', appendLF = F)}
         if (single_intercept){
           
@@ -1143,29 +1122,12 @@ EM_analysis <- function(formula, design, K, lambda, weights = NULL,
         
       }else if (tau_method == 'nullspace'){
         
-        # # Get L2 distance
-        # binding_restrictions <- apply(beta, MARGIN = 2, 
-        #   FUN=function(b){F_EM_update(b, Fmatrix, lambda = 1, pi.gamma = 1, exo_weights = 1)})
-        # binding_restrictions <- lapply(binding_restrictions, FUN=function(i){
-        #   lapply(i, FUN=function(j){which(j[,1] > 1/tau_equality_threshold)})
-        # })
-        
-        # if (log_method != 'standard'){
         binding_restrictions <- lapply(E.tau, FUN=function(etau.k){
           lapply(etau.k, FUN=function(k){which(k[,1] >= tau_truncate)})
         })
-        # }else{
-        #   binding_restrictions <- apply(basis_M %*% beta, MARGIN = 2, FUN=function(b){
-        #     br <- calc_distance_binding(b, binding_lookup)
-        #     # br <- lapply(prepare_fusion(factor_levels = factor_levels, term_position = term_position, coef_names = coef_names, beta = b, simplify = FALSE), FUN=function(i){
-        #     #   sapply(i, FUN=function(j){max(unlist(j))})
-        #     # })
-        #     br <- lapply(br, FUN=function(j){which(j <= tau_equality_threshold)})
-        #     return(br)
-        #   })
-        # }
 
         if (length(unlist(binding_restrictions)) == 0){#If nothing binds, do standard "clip".
+
           if (debug){message('|', appendLF = F)}
           if (single_intercept){
             tic('cg_est')
@@ -1188,6 +1150,7 @@ EM_analysis <- function(formula, design, K, lambda, weights = NULL,
             removed_restrictions <- mapply(existing_restrictions, binding_restrictions, SIMPLIFY = F, FUN=function(e,b){
               mapply(e,b, FUN=function(e_j, b_j){setdiff(e_j,b_j)}, SIMPLIFY = F)
             })
+            # If any have been removed, set "existing" to currently binding ones
             if (length(unlist(removed_restrictions) > 0)){
               existing_restrictions <- binding_restrictions
               reset_nullspace <- TRUE
@@ -1195,7 +1158,7 @@ EM_analysis <- function(formula, design, K, lambda, weights = NULL,
               reset_nullspace <- FALSE
             }
           }else{reset_nullspace <- FALSE}
-          
+
           all_restrictions <- mapply(existing_restrictions, binding_restrictions, SIMPLIFY = F, FUN=function(e,b){
             mapply(e,b, FUN=function(e_j, b_j){union(e_j,b_j)}, SIMPLIFY = F)
           })
@@ -1215,91 +1178,113 @@ EM_analysis <- function(formula, design, K, lambda, weights = NULL,
             message('-', appendLF = F)
           }
           
-          # Checksum for basis
-          # b2 <- drop0(new_null_basis %*% joint_basis[-1:-ncol(binding_null_basis),])
-          #
-          # if (!all.equal(b1, b2)){
-          #   b1 <- b1
-          #   b2 <- b2
-          #   stop('Null Spaces do not match ')
-          # }
-          
+          fr <- force_reset & (length(unlist(new_restrictions)) > 0)
+
           if (single_intercept){
-            if (is.null(binding_null_basis) | reset_nullspace){
+            
+            if (is.null(binding_null_basis) | reset_nullspace | fr){
+              
               binding_null_basis <- lapply(all_restrictions, FUN=function(r_k){
-                binding_k <- do.call('rbind', mapply(r_k, Fmatrix, SIMPLIFY = FALSE, FUN=function(i, F_j){
-                  do.call('rbind', F_j[i])
+                binding_k <- do.call('rbind', mapply(r_k, Dlist, SIMPLIFY = FALSE, FUN=function(i, D_j){
+                  do.call('rbind', D_j[i])
                 }))
-                binding_k <- binding_k[,-p_X]
+                binding_k <- binding_k[,-p_X,drop=F]
                 if (is.null(binding_k)){
                   return(sparse_diag(rep(1, p_X - 1)))
                 }else{
-                  drop0(zapsmall(calculate_nullspace_basis(binding_k), clip_tiny))
+                  drop0(absolute_zap(calculate_nullspace_basis(binding_k), clip_tiny))
                 }
               })
+              list_null_basis <- binding_null_basis
               binding_null_basis <- bdiag(c(1, bdiag(binding_null_basis)))
+              
             }else if (length(unlist(new_restrictions)) > 0){
-              new_null_basis <- lapply(new_restrictions, FUN=function(r_k){
-                binding_k <- do.call('rbind', mapply(r_k, Fmatrix, SIMPLIFY = FALSE, FUN=function(i, F_j){
-                  do.call('rbind', F_j[i])
+              
+              # Using procedure from Golub and van Loan (e.g., 12.4.2)
+              # on the intersection of two nullspaces given an existing
+              # basis for the nullspace of one matrix
+              #
+              new_null_basis <- mapply(new_restrictions, list_null_basis, FUN=function(r_k, b_k){
+                binding_k <- do.call('rbind', mapply(r_k, Dlist, SIMPLIFY = FALSE, FUN=function(i, D_j){
+                  do.call('rbind', D_j[i])
                 }))
-                binding_k <- binding_k[,-ncol(X)]
+                binding_k <- binding_k[,-ncol(X),drop=F]
                 if (is.null(binding_k)){
-                  sparse_diag(rep(1, ncol(X) - 1))
+                  return(b_k)
                 }else{
-                  drop0(zapsmall(calculate_nullspace_basis(binding_k), clip_tiny))
+                  int_k <- drop0(absolute_zap(binding_k %*% b_k, clip_tiny))
+                  return(
+                    drop0(absolute_zap(
+                      b_k %*% calculate_nullspace_basis(int_k),
+                      clip_tiny))
+                  )
                 }
               })
-              new_null_basis <- bdiag(c(1, new_null_basis))
-              
-              joint_basis <- calculate_nullspace_basis(as(crossprod(cbind(binding_null_basis, - new_null_basis)), 'dgCMatrix'))
-              b1 <- drop0(binding_null_basis %*% joint_basis[1:ncol(binding_null_basis),])
-              binding_null_basis <- drop0(zapsmall(b1, clip_tiny))
-              rm(b1)
+              list_null_basis <- new_null_basis
+              binding_null_basis <- bdiag(c(1, new_null_basis))
             }
           }else{
-            if (is.null(binding_null_basis) | reset_nullspace){
+            if (is.null(binding_null_basis) | reset_nullspace | fr){
               binding_null_basis <- lapply(all_restrictions, FUN=function(r_k){
-                binding_k <- do.call('rbind', mapply(r_k, Fmatrix, SIMPLIFY = FALSE, FUN=function(i, F_j){
-                  do.call('rbind', F_j[i])
+                binding_k <- do.call('rbind', mapply(r_k, Dlist, SIMPLIFY = FALSE, FUN=function(i, D_j){
+                  do.call('rbind', D_j[i])
                 }))
                 if (is.null(binding_k)){
                   sparse_diag(rep(1, ncol(X)))
                 }else{
-                  drop0(zapsmall(calculate_nullspace_basis(binding_k), clip_tiny))
+                  drop0(absolute_zap(calculate_nullspace_basis(binding_k), clip_tiny))
                 }
               })
+              list_null_basis <- binding_null_basis
               binding_null_basis <- bdiag(binding_null_basis)
             }else if (length(unlist(new_restrictions)) > 0){
-              new_null_basis <- lapply(new_restrictions, FUN=function(r_k){
-                binding_k <- do.call('rbind', mapply(r_k, Fmatrix, SIMPLIFY = FALSE, FUN=function(i, F_j){
-                  do.call('rbind', F_j[i])
+
+              # Using procedure from Golub and van Loan (e.g., 12.4.2)
+              # on the intersection of two nullspaces given an existing
+              # basis for the nullspace of one matrix
+
+              new_null_basis <- mapply(new_restrictions, list_null_basis, FUN=function(r_k, b_k){
+                binding_k <- do.call('rbind', mapply(r_k, Dlist, SIMPLIFY = FALSE, FUN=function(i, D_j){
+                  do.call('rbind', D_j[i])
                 }))
                 if (is.null(binding_k)){
-                  sparse_diag(rep(1, ncol(X)))
+                  return(b_k)
                 }else{
-                  drop0(zapsmall(calculate_nullspace_basis(binding_k), clip_tiny))
+                  int_k <- drop0(absolute_zap(binding_k %*% b_k, clip_tiny))
+                  return(
+                    drop0(absolute_zap(
+                      b_k %*% calculate_nullspace_basis(int_k),
+                      clip_tiny))
+                  )
                 }
               })
-              new_null_basis <- bdiag(new_null_basis)
-              
-              joint_basis <- calculate_nullspace_basis(as(crossprod(cbind(binding_null_basis, - new_null_basis)), 'dgCMatrix'))
-              b1 <- drop0(binding_null_basis %*% joint_basis[1:ncol(binding_null_basis),])
-              binding_null_basis <- drop0(zapsmall(b1, clip_tiny))
-              rm(b1)
+              list_null_basis <- new_null_basis
+              binding_null_basis <- bdiag(new_null_basis)
             }
           }
           
           existing_restrictions <- all_restrictions
           tracking_restrictions[it,] <- c(length(unlist(new_restrictions)), ncol(binding_null_basis))
         
+          E.ridge <- mapply(all_restrictions, E.tau, SIMPLIFY = FALSE,
+            FUN=function(r_k, E.tauk){
+              E.tauk <- mapply(r_k, E.tauk, SIMPLIFY = FALSE,
+                FUN=function(r_kj, j){
+                  j[,1][r_kj] <- 0
+                  return(j)
+              })
+              out_k <- drop0(make_ridge(E.tauk = E.tauk,
+                raw_F = raw_F, method = 'raw'))
+            return(out_k)
+          })
+          
           if (single_intercept){
             blocked_E <- bdiag(c(0, E.ridge))
             blocked_E <- blocked_E[-(1 + ncol(X) * 1:K),-(1 + ncol(X) * 1:K)]
           }else{
             blocked_E <- bdiag(E.ridge)
           }
-            
+          
           if (beta_method == 'cg'){
 
             tic('cg_init')
@@ -1327,14 +1312,45 @@ EM_analysis <- function(formula, design, K, lambda, weights = NULL,
 
           }else if (beta_method == 'cpp'){
             
-            # if (!single_intercept){stop()}
+            # E.ridge_old <- lapply(E.tau, FUN=function(i){
+            #   make_ridge(E.tauk = i, raw_F = raw_F, method = 'raw')
+            # })
+            # blocked_E_old <- bdiag(c(0, E.ridge_old))
+            # blocked_E_old <- blocked_E_old[-(1 + ncol(X) * 1:K),-(1 + ncol(X) * 1:K)]
+            # blocked_E_old <- t(binding_null_basis) %*%
+            #   blocked_E_old %*% binding_null_basis
+            # blocked_E_old <- drop0(absolute_zap(blocked_E_old, clip_tiny))
+
+            blocked_E <- t(binding_null_basis) %*% blocked_E %*% binding_null_basis
+            blocked_E <- drop0(absolute_zap(blocked_E, clip_tiny))
+            # if (max(abs(blocked_E - blocked_E_old)) > 1e-4){
+            #   ttt <- (max(abs(blocked_E - blocked_E_old)))
+            #   if (ttt > 0){
+            #     print('Diff')
+            #     warning(round(ttt, 5))
+            #   }
+            # }
+            proj_X <- blocked_X %*% binding_null_basis
+            v_E.omega <- as.vector(E.omega)
             
-            blocked_beta_null <- cpp_beta_plain(X = blocked_X %*% binding_null_basis,
-              s = rep(weights * (y - 1/2), K) * as.vector(obs.E.prob),
-              K = K, omega = sparse_diag(as.vector(E.omega)),
-              ridge = t(binding_null_basis) %*% blocked_E %*% binding_null_basis
+            # Implement a quick diagonal preconditioning step
+            # weight_col <- rep(1, ncol(proj_X))
+            weight_col <- 1/sqrt(
+                colSums(
+                  (Diagonal(x=sqrt(v_E.omega)) %*%
+                  proj_X)^2
+                ) +
+                  diag(blocked_E)
             )
+            weight_col[weight_col == Inf] <- 1
             
+            blocked_beta_null <- Diagonal(x=weight_col) %*% cpp_beta_plain(
+              X = proj_X %*% Diagonal(x = weight_col), 
+              s = rep(weights * (y - 1/2), K) * as.vector(obs.E.prob),
+              K = K, omega = sparse_diag(v_E.omega),
+              ridge = Diagonal(x=weight_col) %*% blocked_E %*% Diagonal(x=weight_col)
+            )
+
           }else{stop('invalid beta method: cpp or cg')}
           
           if (single_intercept){
@@ -1397,7 +1413,8 @@ EM_analysis <- function(formula, design, K, lambda, weights = NULL,
         update_phi <- update_phi(phi = phi, W = W, 
                           ridge_phi = ridge_phi, weights_W = weights_W,
                           group_E.prob = group_E.prob, K = K,
-                          maxit_phi = maxit_pi)
+                          maxit_mod = maxit_pi,
+                          extra_opt_args = optim_phi_ctrl)
         pi <- update_phi$pi_bar
         phi <- update_phi$phi
         
@@ -1414,7 +1431,7 @@ EM_analysis <- function(formula, design, K, lambda, weights = NULL,
 
         phi <- update_mod$phi
         pi <- update_mod$pi_bar
-        
+        store_moderator[it] <- update_mod$convergence
       }
       colnames(phi) <- colnames(W)
       rownames(phi) <- 1:K
@@ -1445,8 +1462,9 @@ EM_analysis <- function(formula, design, K, lambda, weights = NULL,
         SQUAREM_list <- SQUAREM_list
         
         #Prepare SQUAREM update
-        proposed_SQUAREM <- prepare_SQUAREM(SQUAREM_list, scale_alpha = 2)
-        
+        proposed_SQUAREM <- prepare_SQUAREM(
+          SQUAREM_list, scale_alpha = 2, step = step_SQUAREM)
+        init_alpha <- proposed_SQUAREM$alpha
         if (proposed_SQUAREM$alpha != -1){
           
           if (K == 1){
@@ -1496,13 +1514,13 @@ EM_analysis <- function(formula, design, K, lambda, weights = NULL,
               }
               
               square_EM_ll <- evaluate_loglik(beta = SQUAREM_update[[1]], 
-                pi = proposed_pi, 
-                X = X, y = y, group_mapping = group_mapping,
-                adaptive_weight = adaptive_weight,
-                E.prob =  NA, weights_W = weights_W,
-                phi = SQUAREM_update[[2]], W = W, 
-                ridge_phi = ridge_phi, ridge_beta = ridge_beta,
-                gamma = gamma, Fmatrix = Fmatrix, lambda = lambda, rank_F = rank_F, separate = TRUE)
+                                              pi = proposed_pi, 
+                                              X = X, y = y, group_mapping = group_mapping,
+                                              adaptive_weight = adaptive_weight,
+                                              E.prob =  NA, weights_W = weights_W,
+                                              phi = SQUAREM_update[[2]], W = W, 
+                                              ridge_phi = ridge_phi, ridge_beta = ridge_beta,
+                                              gamma = gamma, Fmatrix = Fmatrix, lambda = lambda, rank_F = rank_F, separate = TRUE)
               
               if (square_EM_ll[1] > new_ll[1]){
                 break
@@ -1515,12 +1533,13 @@ EM_analysis <- function(formula, design, K, lambda, weights = NULL,
               pi <- proposed_pi
               phi <- SQUAREM_update[[2]]
               new_ll <- square_EM_ll
-              
+            }else{
+              backtrack_counter <- -1
             }
           }
         }else{backtrack_counter <- -1; backtrack_alpha <- proposed_SQUAREM$alpha}
         SQUAREM_list <- list()
-        SQUAREM_track[it,] <- c(backtrack_alpha, backtrack_counter)
+        SQUAREM_track[it,] <- c(backtrack_alpha, backtrack_counter, init_alpha)
       }
       toc(quiet = quiet_tictoc, log = TRUE)
       
@@ -1533,11 +1552,15 @@ EM_analysis <- function(formula, design, K, lambda, weights = NULL,
     
     
     store_ll[it,] <- running_ll
+    
+    change_logposterior <- running_ll[1] - old.lp
+
     old.beta <- beta
+    old.lp <- running_ll[1]
     
     max.all <- max(c(change.beta, change.phi))
-    # if (change_logposterior < 0){change.logpos <- Inf}
-    # print(change_logposterior)
+    # plot(na.omit(store_ll)[,1], type = 'l')
+    # print(log10(c(max.all, change_logposterior)))
     if (max.all < tolerance.parameters | (change_logposterior > 0 & (change_logposterior < tolerance.logposterior))){
       if (it > control$tau_stabilization){
         message('Converged')
@@ -1563,8 +1586,9 @@ EM_analysis <- function(formula, design, K, lambda, weights = NULL,
   tic('Fuse')
 
   fusion_analysis <- mapply(list_from_cols(recons.beta), 1:ncol(recons.beta), SIMPLIFY = FALSE, FUN=function(b, cl){
-    out <- prepare_fusion(factor_levels, term_position, coef_names, beta = b)
-    out$cluster <- cl
+    out <- prepare_fusion(factor_levels, term_position, coef_names, beta = b,
+                          ordered_factors = ordered_factors)
+    out$group <- cl
     return(out)
   })
   fusion_analysis <- do.call('rbind', fusion_analysis)
@@ -1580,7 +1604,6 @@ EM_analysis <- function(formula, design, K, lambda, weights = NULL,
       lapply(etau.k, FUN=function(k){which(k[,1] >= tau_truncate)})
     })
   }
-  
   
   if (control$calc_df){
     
@@ -1605,8 +1628,9 @@ EM_analysis <- function(formula, design, K, lambda, weights = NULL,
       }
       
     }else{
-      if (tau_method == 'clip' | is.null(binding_null_basis)){
+      if (tau_method == 'clip' | is.null(binding_null_basis) | TRUE){
         
+        # if (force_reset){print('Forcing')}
         # binding_lookup <- build_binding_lookup(Fmatrix = Fmatrix, factor_levels = factor_levels, term_position = term_position, coef_names = coef_names)
         existing_restrictions <- lapply(1:K, FUN=function(i){
           i <- lapply(1:length(Fmatrix), FUN=function(j){c()})
@@ -1615,31 +1639,21 @@ EM_analysis <- function(formula, design, K, lambda, weights = NULL,
         })
 
         if (single_intercept){
-          blocked_X <- cbind(1, kronecker(diag(K), X[,-ncol(X)]))
+          blocked_X <- cbind(1, kronecker(Diagonal(n=K), X[,-ncol(X)]))
         }else{
-          blocked_X <- kronecker(diag(K), X)
+          blocked_X <- kronecker(Diagonal(n=K), X)
         }
-        
-        # binding_restrictions <- apply(basis_M %*% beta, MARGIN = 2, FUN=function(b){
-        #   br <- calc_distance_binding(b, binding_lookup)
-        #   # br <- lapply(prepare_fusion(factor_levels = factor_levels, term_position = term_position, coef_names = coef_names, beta = b, simplify = FALSE), FUN=function(i){
-        #   #   sapply(i, FUN=function(j){max(unlist(j))})
-        #   # })
-        #   br <- lapply(br, FUN=function(j){which(j <= tau_equality_threshold)})
-        #   return(br)
-        # })
-        
         
         if (single_intercept){
           binding_null_basis <- lapply(binding_restrictions, FUN=function(r_k){
-            binding_k <- do.call('rbind', mapply(r_k, Fmatrix, SIMPLIFY = FALSE, FUN=function(i, F_j){
-              do.call('rbind', F_j[i])
+            binding_k <- do.call('rbind', mapply(r_k, Dlist, SIMPLIFY = FALSE, FUN=function(i, D_j){
+              do.call('rbind', D_j[i])
             }))
-            binding_k <- binding_k[,-p_X]
+            binding_k <- binding_k[,-p_X,drop=FALSE]
             if (is.null(binding_k)){
               return(sparse_diag(rep(1, p_X - 1)))
             }else{
-              drop0(zapsmall(calculate_nullspace_basis(binding_k), clip_tiny))
+              drop0(absolute_zap(calculate_nullspace_basis(binding_k), clip_tiny))
             }
           })
           binding_null_basis <- bdiag(c(1, bdiag(binding_null_basis)))
@@ -1649,13 +1663,13 @@ EM_analysis <- function(formula, design, K, lambda, weights = NULL,
           
         }else{
           binding_null_basis <- lapply(binding_restrictions, FUN=function(r_k){
-            binding_k <- do.call('rbind', mapply(r_k, Fmatrix, SIMPLIFY = FALSE, FUN=function(i, F_j){
-              do.call('rbind', F_j[i])
+            binding_k <- do.call('rbind', mapply(r_k, Dlist, SIMPLIFY = FALSE, FUN=function(i, D_j){
+              do.call('rbind', D_j[i])
             }))
             if (is.null(binding_k)){
               return(sparse_diag(rep(1, p_X)))
             }else{
-              drop0(zapsmall(calculate_nullspace_basis(binding_k), clip_tiny))
+              drop0(absolute_zap(calculate_nullspace_basis(binding_k), clip_tiny))
             }
           })
           binding_null_basis <- bdiag(binding_null_basis)
@@ -1725,6 +1739,8 @@ EM_analysis <- function(formula, design, K, lambda, weights = NULL,
     est_IC$N <- nrow(X)
     est_IC$N_group <- length(unique_group)
     est_IC$K <- K
+    est_IC$iter <- it
+    est_IC$log_posterior <- running_ll[1]
   }else{
     est_IC <- NULL
   }
@@ -1736,14 +1752,14 @@ EM_analysis <- function(formula, design, K, lambda, weights = NULL,
     group_postpred_prob <- calculate_posterior_zi(loglik.k = loglik.k, group_mapping = group_mapping, W = W, 
          K = K, ncol_W = ncol_W, pi = pi, phi = phi, return = 'postpred')
     group_postpred_prob <- data.frame(group = unique_group, as.matrix(group_postpred_prob), stringsAsFactors = F)
-    names(group_postpred_prob)[-1] <- paste0('cluster_', 1:K)
+    names(group_postpred_prob)[-1] <- paste0('group_', 1:K)
   }else{
     group_postpred_prob <- NA
   }
   
   group_output <- data.frame(group = unique_group, as.matrix(group_E.prob), stringsAsFactors = F)
              
-  names(group_output)[-1] <- paste0('cluster_', 1:K)
+  names(group_output)[-1] <- paste0('group_', 1:K)
   
   if (is.na(control$return_data)){
     data_list <- NULL
@@ -1767,16 +1783,31 @@ EM_analysis <- function(formula, design, K, lambda, weights = NULL,
     weights = list(weights = weights, weights_W = weights_W),
     single_intercept = single_intercept,
     group = list(null_group = null_group), 
+    refit = list(term_position = term_position, make_X_refit = make_X_refit,
+                 coef_names = coef_names, p_X = p_X, 
+                 Fmatrix_orig = Fmatrix_orig,
+                 p_orig = p_orig),
     misc = list(clip_tiny = clip_tiny, nullspace = tracking_restrictions))
   internal_parameters$control <- control
   internal_parameters$SQUAREM <- list(SQUAREM_track = SQUAREM_track)
   internal_parameters$data <- data_list
   internal_parameters$adaptive_weight <- adaptive_weight
 
+  store_ll <- na.omit(store_ll)
+  store_moderator <- na.omit(store_moderator)
+  
   internal_parameters$convergence <- list(beta = change.beta, phi = change.phi, 
       log.posterior = change_logposterior)
-  internal_parameters$trajectory <- list(beta = store_beta, ll = store_ll)
+  internal_parameters$trajectory <- list(
+    beta = store_beta, 
+    ll = store_ll, 
+    moderator = store_moderator)
   
+  # final_tol <- sqrt(.Machine$double.eps)
+  final_tol <- 1e-7
+  if (any(diff(store_ll[,1]) < -final_tol)){
+    warning('log_posterior decreased during estimation;\ncheck logLik(fit, "log_posterior_seq") for pathological behavior.', immediate. = TRUE)
+  }
   internal_parameters$fusion <- fusion_analysis
   internal_parameters$factor_levels <- factor_levels
   internal_parameters$formula <- list(het = formula_recons, mod = formula_mod,
@@ -1788,6 +1819,7 @@ EM_analysis <- function(formula, design, K, lambda, weights = NULL,
   internal_parameters$Fmatrix <- Fmatrix
   internal_parameters$use_forced_choice <- use_forced_choice
   internal_parameters$basis_M <- basis_M
+  internal_parameters$basis_final <- binding_null_basis
   
   parameters <- list(beta = recons.beta, pi = pi, 
       eff_lambda = lambda, orig_lambda = orig_lambda,
@@ -1820,18 +1852,41 @@ EM_analysis <- function(formula, design, K, lambda, weights = NULL,
   }
   toc(quiet = quiet_tictoc, log = TRUE)
   
-  tic.clear()
-  timing_list <- unlist(tic.log())
-  timing_list <- do.call('rbind', strsplit(timing_list, split=': | sec elapsed', perl = TRUE))
-  timing_list <- do.call('rbind', lapply(split(timing_list[,2], timing_list[,1]), FUN=function(i){data.frame(t(c(length(i), as.vector(summary(as.numeric(i))))))}))
-  colnames(timing_list) <- c('number_of_times', 'min', 'first_q', 'median', 'mean', 'third_q', 'max')
-  timing_list <- cbind('stage' = rownames(timing_list), timing_list)
-  timing_list$total_time <- with(timing_list, number_of_times * mean)
-  rownames(timing_list) <- NULL
+  if (has_tictoc){
+    tictoc::tic.clear()
+    timing_list <- unlist(tictoc::tic.log())
+    timing_list <- do.call('rbind', strsplit(timing_list, split=': | sec elapsed', perl = TRUE))
+    timing_list <- do.call('rbind', lapply(split(timing_list[,2], timing_list[,1]), FUN=function(i){data.frame(t(c(length(i), as.vector(summary(as.numeric(i))))))}))
+    colnames(timing_list) <- c('number_of_times', 'min', 'first_q', 'median', 'mean', 'third_q', 'max')
+    timing_list <- cbind('stage' = rownames(timing_list), timing_list)
+    timing_list$total_time <- with(timing_list, number_of_times * mean)
+    rownames(timing_list) <- NULL
+    tictoc::tic.clearlog()
+    output$internal_parameters$timing <- timing_list
+  }else{
+    output$internal_parameters$timing <- NULL
+  }
+  # Diagnostic for numerical stability:
+  # Are any default options changed?
+  basic_check <- control$beta_method != 'cpp' |
+    control$optim_phi_controls$method != 'lib_lbfgs' |
+    !is.null(control$maxit_pi)
+  if (do_SQUAREM){
+    # Get the maximum proposed step *before* backtracking
+    min_step <- na.omit(SQUAREM_track[,3])
+    if (length(min_step) > 0){
+      min_step <- min(min_step)
+    }else{
+      min_step <- Inf
+    }
+    # Is this rather large?
+    SQUAREM_check <- min_step < -50
+  }else{
+    SQUAREM_check <- FALSE
+  }
   
-  tic.clearlog()
-  
-  output$internal_parameters$timing <- timing_list
+  output$internal_parameters$diagnostic <- list(
+    basic = basic_check, SQUAREM = SQUAREM_check)
   
   return(output)
 }
@@ -1926,7 +1981,7 @@ evaluate_loglik <- function(beta, pi, phi, weights_W,
     rank_F <- rank_via_null(rank_F)
   }
   ncol_W <- ncol(W)
-  #Get the loglikelihood for y_i given cluster assignment.
+  #Get the loglikelihood for y_i given group assignment.
   xb <- as.matrix(X %*% beta) 
   K <- ncol(beta)
   
@@ -1956,7 +2011,7 @@ evaluate_loglik <- function(beta, pi, phi, weights_W,
     logprior.beta <- sum(pi^gamma * logprior.beta) +
       sum(rank_F * gamma * log(pi)) 
   }else{
-    #Get the log prior for each cluster p(\beta_r) = c(F) (\lambda pi_k^\gamma)^m \exp(- \sum_{l} \lambda \pi_r^\gamma\sqrt{\beta_r^T F_l \beta_r})
+    #Get the log prior for each group p(\beta_r) = c(F) (\lambda pi_k^\gamma)^m \exp(- \sum_{l} \lambda \pi_r^\gamma\sqrt{\beta_r^T F_l \beta_r})
     logprior.beta <- F_prior_weight(beta = beta, Fmat = Fmatrix, lambda = lambda, 
                                     adaptive_weight = adaptive_weight,
                                     kern_epsilon = kern_epsilon,
@@ -2060,7 +2115,7 @@ calculate_posterior_zi <- function(loglik.k, group_mapping, K,
   }
   
   if (return == 'prob'){
-    #Get E[z_i | -] for cluster membership
+    #Get E[z_i | -] for group membership
     group_E.prob <- softmax_matrix(group_loglik.k)
     
     colnames(group_E.prob) <- 1:K
@@ -2186,44 +2241,7 @@ update_beta_global_int <- function(blocked_X, y, E.omega, obs.E.prob, weights, E
   return(beta)
 }
 
-
-calculate_null_binding <- function(Fmatrix, beta, tolerance = 1e-6){
-  
-  l2_beta <- mapply(list_from_cols(beta), SIMPLIFY = FALSE, FUN=function(b){
-    lapply(F_EM_update(b, Fmatrix, lambda = 1, pi.gamma = 1, exo_weights = NULL), FUN=function(i){1/i[,1]})
-  })
-  K <- ncol(beta)
-  nonbinding_ridge <- as.list(rep(NA, K))
-  all_binding_null <- as.list(rep(NA, K))
-  
-  for (k in 1:K){
-    binding_F <- mapply(l2_beta[[k]], Fmatrix, SIMPLIFY = FALSE, FUN=function(pen, F.j){
-      enforce_restriction <- (pen <= tolerance)
-      
-      enforce_F <- do.call('rbind', F.j[enforce_restriction])
-      
-      ridge.j <- Reduce('+', mapply(pen[!enforce_restriction], F.j[!enforce_restriction], SIMPLIFY = FALSE, FUN=function(etau.l, l){
-        etau.l * l
-      }))
-      if (is.null(ridge.j)){
-        ridge.j <- drop0(sparseMatrix(i = 1, j = 1, x = 0, dims = dim(F.j[[1]])))
-      }
-      return(list(enforce = enforce_F, ridge = ridge.j))
-    })
-    
-    null_binding <- lapply(binding_F, FUN=function(i){i$enforce})
-    null_binding <- null_binding[sapply(null_binding, FUN=function(i){!is.null(i)})]
-    if (length(null_binding) == 0){
-      all_binding_null[[k]] <- 'No Restrictions'
-    }else{
-      all_binding_null[[k]] <- drop0(zapsmall(calculate_nullspace_basis(do.call('rbind', null_binding)), 15))
-    }
-    nonbinding_ridge[[k]] <- Reduce('+', lapply(binding_F, FUN=function(i){i$ridge}))
-  }
-  return(list(null_basis = all_binding_null, nonbinding_ridge = nonbinding_ridge))
-}
-
-prepare_SQUAREM <- function(SQUAREM_list, alpha_revert = -1.01, scale_alpha = 1){
+prepare_SQUAREM <- function(SQUAREM_list, step, alpha_revert = -1.01, scale_alpha = 1){
   
   SQUAREM_terms <- lapply(c('beta', 'phi'), FUN=function(i){
     #Get change and change in change
@@ -2235,10 +2253,16 @@ prepare_SQUAREM <- function(SQUAREM_list, alpha_revert = -1.01, scale_alpha = 1)
   
   SQUAREM_norm <- sqrt(rowSums(sapply(SQUAREM_terms, FUN=function(i){i$norm})))
   alpha <- -SQUAREM_norm[1]/SQUAREM_norm[2] * scale_alpha
-  if (!is.finite(alpha)){
-    alpha <- -1
-  }else if (alpha > -1){
-    alpha <- alpha_revert
+  alpha <- floor(alpha)
+  
+  if (is.null(step)){
+    if (!is.finite(alpha)){
+      alpha <- -1
+    }else if (alpha > -1){
+      alpha <- alpha_revert
+    }
+  }else{
+    alpha <- step
   }
 
   SQUAREM_update <- lapply(SQUAREM_terms, FUN=function(i){
@@ -2306,4 +2330,31 @@ simple_logit <- function(y, X, iterations, weights, obs.E.prob = NULL, binary = 
   }
   
   return(beta)
+}
+
+
+absolute_zap <- function (x, digits) {
+  if (length(digits) == 0L) 
+    stop("invalid 'digits'")
+  # Explicitly kill any small values
+  x@x[which(abs(x@x) < 10^-digits)] <- 0
+  return(drop0(x))
+  # return(round(x, digits = digits))
+}
+
+simple_QR <- function(X, s, sqrt_omega, ridge){
+  # m1 <- as.vector(solve(Cholesky(t(X) %*% Diagonal(x=sqrt_omega^2) %*% X + ridge), t(X) %*% s))
+  precond_R <- Diagonal(x=1/sqrt(diag(ridge)[-1]))
+  chol_ridge <- Cholesky(precond_R %*% ridge[-1,-1] %*% precond_R)
+  chol_ridge <- expand(chol_ridge)
+  # t(P) L t(L) P = ridge[-1,-1]
+  chol_ridge$P <- bdiag(1, chol_ridge$P)
+  chol_ridge$L <- bdiag(0, chol_ridge$L)
+  precond_R <- bdiag(1, precond_R)
+  # tilde(beta) = P beta
+  # m1 <- t(chol_ridge$P) %*% solve(Cholesky(t(M) %*% M), chol_ridge$P %*% t(X) %*% s)
+  M <- rbind(Diagonal(x=sqrt_omega) %*% X %*% precond_R %*% t(chol_ridge$P), t(chol_ridge$L))
+  qr_M <- qr(M)
+  out <- precond_R %*% t(chol_ridge$P) %*% qr.coef(qr_M, c(s/sqrt_omega, rep(0, nrow(chol_ridge$L))))
+  return(out)
 }

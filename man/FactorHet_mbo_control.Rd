@@ -2,7 +2,7 @@
 % Please edit documentation in R/mbo_functions.R
 \name{FactorHet_mbo_control}
 \alias{FactorHet_mbo_control}
-\title{Control for Model-Based Optimization}
+\title{Control for model-based optimization}
 \usage{
 FactorHet_mbo_control(
   mbo_type = c("sparse", "ridge"),
@@ -12,6 +12,7 @@ FactorHet_mbo_control(
   mbo_method = "regr.bgp",
   final_method = "best.predicted",
   iters = 11,
+  mbo_noisy = TRUE,
   criterion = c("BIC", "AIC", "GCV", "BIC_group"),
   ic_method = c("EM", "IRLS", "free_param"),
   se_final = TRUE,
@@ -21,69 +22,87 @@ FactorHet_mbo_control(
 )
 }
 \arguments{
-\item{mbo_type}{Options \code{"sparse"} (default) or \code{"ridge"}. The
-former (\code{"sparse"}) uses the structured sparse penalty discussed in Goplerud et al.
-(2022). \code{"ridge"} does a ridge regression.}
+\item{mbo_type}{A character argument indicating the type of model to
+estimate. The default is \code{"sparse"} which uses the structured sparse
+penalty discussed in Goplerud et al. (2025) and discussed in
+\code{\link{FactorHet}}. \code{"ridge"} performs a ridge regression.}
 
-\item{mbo_initialize}{Initialization method for each MBO proposal. See
-"Details" for more discussion.}
+\item{mbo_initialize}{An argument for the initialization method for each MBO
+proposal. The default is \code{"mm_mclust_prob"}. "Details" provides a more
+in-depth discussion.}
 
-\item{mm_init_iterations}{How many options to use if Murphy/Murphy
-initialization is required? See "Details" for discussion. Default of
-\code{NULL} uses default values of 100 if probabilistic and 50 if
-deterministic.}
+\item{mm_init_iterations}{An integer value of the number of iterations to use
+if Murphy/Murphy initialization is used. The default is \code{NULL} which
+uses default values of 100 if probabilistic and 50 if deterministic.
+"Details" provides a more in-depth discussion.}
 
-\item{mbo_range}{The range of values to consider on log10(lambda), before
-standardization. See "Details". Default is \code{c(-5,0)}.}
+\item{mbo_range}{A vector of numerical values that set the range of values to
+consider on \code{log10(lambda)}, before standardization (e.g., scaling by
+\eqn{N}, see \code{\link{FactorHet_control}}. The default is
+\code{c(-5,0)}. "Details" provides more information.}
 
-\item{mbo_method}{Function used to propose new values of the regularization
-parameters. See information from \code{mlr3} for more details.}
+\item{mbo_method}{A function used to propose new values of the regularization
+parameters. See information from \code{\link[mlr]{mlr}} for more details.
+The default is \code{"regr.bgp"} which requires the \code{tgp} package to
+be installed.}
 
-\item{final_method}{How should the final regularization parameter be
-selected? Default is \code{"best_predicted"}. As documented in
-\code{makeMBOcontrol} for \code{final.method}, this uses the final model to
-predict all points visited and use the best one. Alternative options are
-those available in \code{makeMBOcontrol} and include \code{"last.proposed"}
-and \code{"best.true.y"}.}
+\item{final_method}{A character argument that determines how the final
+regularization parameter should be selected. The default is
+\code{"best_predicted"} that uses the regularization parameter that is
+predicted to have the best value of the criterion. Other options are
+described in detail in \code{\link[mlrMBO]{makeMBOControl}} for
+\code{final.method}. Alternative options include \code{"last.proposed"} and
+\code{"best.true.y"}.}
 
-\item{iters}{How many proposals to do after initialization?}
+\item{iters}{A non-negative integer value of the number of proposals to do
+after initialization. The default is 11.}
 
-\item{criterion}{Which criterion to minimize? Options are \code{"BIC"}
-(default), \code{"AIC"}, \code{"GCV"}, or \code{"BIC_group"}.
+\item{mbo_noisy}{A logical value for whether to treat the objective function
+as "noisy" for purposes of model-based optimization. The default is
+\code{TRUE}. The \code{"noisy_optimization"} vignette from \code{mlrMBO}
+provides more details. The criterion function is not, in fact, noisy but
+this option often performs better for a non-smooth function. It uses
+\code{link[mlrMBO]{crit.eqi}} instead of \code{link[mlrMBO]{crit.ei}}.}
+
+\item{criterion}{A character value of the criterion to minimize. Options are
+\code{"BIC"} (default), \code{"AIC"}, \code{"GCV"}, or \code{"BIC_group"}.
 \code{"BIC_group"} counts the number of observations as the number of
-individuals (e.g. in the case of repeated observations per person).}
+individuals (e.g., in the case of repeated observations per person).}
 
-\item{ic_method}{Method for calculating degrees of freedom: \code{"EM"}
-(default), \code{"IRLS"}, \code{"free_param"}. See \link{FactorHet_control}
-for more information.}
+\item{ic_method}{A character value for the method for calculating degrees of
+freedom: \code{"EM"} (default), \code{"IRLS"}, and \code{"free_param"}. See
+\code{\link{FactorHet_control}} for more information.}
 
-\item{se_final}{Should standard errors be calculated for the final model?
-Default of \code{TRUE}.}
+\item{se_final}{A logical value for whether standard errors be calculated for
+the final model. The default value is \code{TRUE}.}
 
-\item{mbo_design}{How to design the initial proposals for the MBO? See
+\item{mbo_design}{An argument for how to design the initial proposals for
+MBO. The default is -1.5; this and other options are described in
 "Details".}
 
-\item{fast_estimation}{Default \code{NULL} uses same convergence criterion
-for all models. See "Details" for more information.}
+\item{fast_estimation}{An argument as to whether a weaker convergence
+criterion should be used for MBO. The default is \code{NULL} which uses the
+\emph{same} arguments for all models. "Details" provides more information.}
 
-\item{verbose}{Show the progress of MBO at each iteration; default
-\code{FALSE}.}
+\item{verbose}{A logical argument to provide more information on the initial
+steps for MBO; the default is \code{FALSE}.}
 }
 \description{
 \code{FactorHet_mbo_control} is used to adjust the settings for the MBO
-(Model-Based Optimization). All arguments have default values. This relies
-heavily on options from the \code{mlrMBO} package so please see this for more
-detailed discussion.
+(model-based optimization). All arguments have default values. This relies
+heavily on options from the \code{\link[mlrMBO:mlrMBO_examples]{mlrMBO}}
+package so please see this package for more detailed discussion.
 }
 \details{
-\bold{Initialization}: \code{FactorHet_mbo} relies on the same initialization for each
-attempt. The default procedure (\code{"mm_mclust_prob"}) is discussed in detail in
-the appendix of Goplerud et al. (2022) and builds on Murphy and Murphy (2020).
-In brief, it deterministically initializes cluster memberships using only the
-moderators (e.g. using \code{"mclust"}). Using those memberships, it uses an
-EM algorithm (with probabilistic assignment, if \code{"prob"} is specified,
-or hard assignment otherwise) for a few steps with only the main effects to
-update the proposed cluster memberships. If the warning appears that
+\bold{Initialization}: \code{\link{FactorHet_mbo}} relies on the same
+initialization for each attempt. The default procedure
+(\code{"mm_mclust_prob"}) is discussed in detail in the appendix of Goplerud
+et al. (2025) and builds on Murphy and Murphy (2020). In brief, it
+deterministically initializes group memberships using only the moderators
+(e.g. using \code{"mclust"}). Using those memberships, it uses an EM
+algorithm (with probabilistic assignment, if \code{"prob"} is specified, or
+hard assignment otherwise) for a few steps with only the main effects to
+update the proposed group memberships. If the warning appears that
 "Murphy/Murphy initialization did not fully converge" , this mean that this
 initial step did not fully converge. The number of iterations could be
 increased using \code{mm_init_iterations} if desired, although benefits are
@@ -91,10 +110,10 @@ usually modest beyond the default settings. These memberships are then used
 to initialize the model at each proposed regularization value.
 
 The options available are \code{"spectral"} and \code{"mclust"} that use
-\code{"spectral"} or \code{"mclust"} on the moderators with no Murphy/Murphy style
-tuning. Alternatively, \code{"mm_mclust"} and \code{"mm_spectral"} combine
-the Murphy/Murphy tuning upon the corresponding initial deterministic
-intialization (e.g. spectral or \code{"mclust"}). These use hard assignment
+\code{"spectral"} or \code{"mclust"} on the moderators with no Murphy/Murphy
+style tuning. Alternatively, \code{"mm_mclust"} and \code{"mm_spectral"}
+combine the Murphy/Murphy tuning upon the corresponding initial deterministic
+initialization (e.g. spectral or \code{"mclust"}). These use hard assignment
 at each step and likely will converge more quickly although a hard initial
 assignment may not be desirable. Adding the suffix \code{"_prob"} to the
 \code{"mm_*"} options uses a standard (soft-assignment) EM algorithm during
@@ -102,16 +121,17 @@ the Murphy/Murphy tuning.
 
 If one wishes to use a custom initialization for MBO, then set
 \code{mbo_initialize=NULL} and provide an initialization via
-\code{FactorHet_control}. It is strongly advised to use a deterministic
-initialization if done manually, e.g. by providing a list of initial
-assignment probabilities for each group.
+\code{\link{FactorHet_control}}. It is strongly advised to use a
+deterministic initialization if done manually, e.g. by providing a list of
+initial assignment probabilities for each group.
 
 \bold{Design of MBO Proposals}: The MBO procedure works as follows; there are
-some initial proposals that evaluated in terms of the criterion. Given those
-initial proposals, there are \code{iters} attempts to improve the criterion
-through methods described in detail in \code{mlrMBO} (Bischl et al. 2018). A default
-of 11 seems to work well, though one can examine \code{visualize_MBO} after
-estimation to see how the criterion varied across the proposals.
+some initial proposals that are evaluated in terms of the criterion. Given
+those initial proposals, there are \code{iters} attempts to improve the
+criterion through methods described in detail in
+\code{\link[mlrMBO:mlrMBO_examples]{mlrMBO}} (Bischl et al. 2018). A default
+of 11 seems to work well, though one can examine \code{\link{visualize_MBO}}
+after estimation to see how the criterion varied across the proposals.
 
 By default, the regularization parameter is assumed to run from -5 to 0 on
 the log10 scale, before standardizing by the size of the dataset. We found
@@ -122,10 +142,10 @@ a minimum of the criterion more quickly. This is controlled by
 \code{mbo_design} which accepts the following options. Note that a manual
 grid search can be provided using the \code{data.frame} option below.
 
-\itemize{ 
+\describe{ 
 \item{Scalar: }{By default, this is initialized with a scalar
 (-1.5) that is the log10 of lambda, before standardization as discussed in
-\code{FactorHet_control}. For a scalar value, four proposals are generated
+\code{\link{FactorHet_control}}. For a scalar value, four proposals are generated
 that start with the scalar value and adjust it based on the level of sparsity
 of the initial estimated model. This attempts to avoid initializations that
 are too dense and thus are very slow to estimate, as well as ones that are
@@ -141,7 +161,7 @@ run of the algorithm, the column \code{"y"} should contain this value. If it
 is unknown, leave the value as \code{NA} and the value will be estimated.
 Thus, if a manual grid search is desired, this can be done as follows. Create
 a data.frame with the grid values \code{"l"} and all \code{"y"} as NA. Then,
-set \code{iters = 0} to do no estimation \emph{after} the grid search. } 
+set \code{iters = 0} to do no estimation \emph{after} the grid search. }
 }
 
 \bold{Estimation}: Typically, estimation proceeds using the same settings for
@@ -165,7 +185,7 @@ Michel Lang. 2018. "mlrMBO: A Modular Framework for Model-Based Optimization
 of Expensive Black-Box Functions." arxiv preprint:
 \url{https://arxiv.org/abs/1703.03373}
 
-Goplerud, Max, Kosuke Imai, and Nicole E. Pashley. 2022. "Estimating
+Goplerud, Max, Kosuke Imai, and Nicole E. Pashley. 2025. "Estimating
 Heterogeneous Causal Effects of High-Dimensional Treatments: Application to
 Conjoint Analysis." arxiv preprint: \url{https://arxiv.org/abs/2201.01357}
 

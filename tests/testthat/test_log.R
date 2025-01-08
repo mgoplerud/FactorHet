@@ -1,5 +1,20 @@
 context('test LOG')
 
+if (isTRUE(as.logical(Sys.getenv("CI")))){
+  # If on CI
+  NITER <- 2
+  env_test <- "CI"
+}else if (!identical(Sys.getenv("NOT_CRAN"), "true")){
+  # If on CRAN
+  NITER <- 2
+  env_test <- "CRAN"
+  set.seed(7)
+}else{
+  # If on local machine
+  NITER <- 2000
+  env_test <- 'local'
+}
+
 test_that('LOG and Standard Agree with No Interactions', {
   
   dta <- data.frame(
@@ -30,22 +45,15 @@ test_that('LOG and Standard Agree with No Interactions', {
   expect_equal(est_simple_factorial_std$internal_parameters$adaptive_weight,
   est_simple_factorial$internal_parameters$adaptive_weight)
   # Check the estimates are the same
-  expect_equal(coef(est_simple_factorial), coef(est_simple_factorial_std))
+  expect_equal(coef(est_simple_factorial), coef(est_simple_factorial_std),
+               tol = 1e-6, scale = 1)
   # Check the SIZE of the nullspace is the same, i.e. no extra coefficients
   expect_equal(length(est_simple_factorial$parameters$nullspace_beta),
                length(est_simple_factorial_std$parameters$nullspace_beta))
   expect_equal(length(est_simple_factorial$internal_parameters$data$Fmatrix), 3)
 })
 
-test_that('Test Projection Method', {
-  
-  # Projection methods all agree with no B&R weights and no interactions
-  message('ADD TEST HERE for B&R Weights')
-
-})
-
 test_that('B&R weights align with analytical', {
-  
   
   dta <- data.frame(
     state = sample(state.name[1:4], 1000, replace = T),

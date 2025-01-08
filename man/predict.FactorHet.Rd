@@ -8,46 +8,55 @@
   object,
   newdata = NULL,
   type = "posterior",
-  by_cluster = FALSE,
+  by_group = FALSE,
   return = "prediction",
   ...
 )
 }
 \arguments{
-\item{object}{A model estimated using \code{FactorHet} or
-\code{FactorHet_mbo}.}
+\item{object}{A model estimated using \code{\link{FactorHet}} or
+\code{\link{FactorHet_mbo}}.}
 
-\item{newdata}{Data to estimate predictions on; default \code{NULL} uses
-estimation data.}
+\item{newdata}{A dataset on which to generate predictions. The default,
+\code{NULL}, uses the estimation data.}
 
-\item{type}{How to generate the prediction? If \code{"posterior"} (default),
-use the posterior probabilities for each observation in the training data
-for weighting the clusters. If \code{"posterior_predictive"}, use the
-cluster memberships implied by the moderator parameters, e.g. pi_{ik}. If
-using this for evaluating out-of-sample accuracy, using
-\code{"posterior_predictive"} may be sensible.}
+\item{type}{An argument that specifies how to deal with group-membership
+probabilities when making predictions. The default is \code{"posterior"}
+which use the posterior probabilities for each observation in the training
+data for weighting the groups. If \code{"posterior_predictive"} is used,
+the group membership probabilities implied by the moderators, i.e.
+\eqn{\hat{\pi}_k(X_i)}, will be used. If an observation in \code{newdata}
+is not in the estimation data (i.e., its value of \code{group}) is not
+found, then \code{"posterior_predictive"}, i.e. \eqn{\hat{\pi}_k(X_i)}, is
+used.}
 
-\item{by_cluster}{Default of \code{FALSE}. If \code{TRUE}, return predicted
-probabilities by cluster.}
+\item{by_group}{A logical value as to whether the predictions should be
+returned for each group or whether a weighted averaged based on the group
+membership probabilities (specified by \code{type}) should be reported. The
+default is \code{FALSE}.}
 
-\item{return}{Default of \code{"prediction"} returns the prediction. Use
-\code{"detailed"} to return a variety of additional terms. This is mostly
-used internally for estimating marginal effects and other quantities of
-interest.}
+\item{return}{A character value that determines the type of prediction
+return. The default is \code{"prediction"} that returns the predicted
+probability. The option \code{"detailed"} returns a variety of additional
+information. This is mostly called internally for other functions such as
+\code{\link{AME}} or \code{\link{margeff_moderators}}.}
 
-\item{...}{Miscellanous options used internally and not documented.}
+\item{...}{Miscellaneous options used internally and not documented.}
 }
 \description{
-Get predictions of chosing particular profiles for either the data used
-during estimation or some out-of-sample dataset.
+Predicted values for choosing particular profiles based on
+\code{\link{FactorHet}}.
 }
 \examples{
 data(immigration)
+set.seed(1)
 # Fit a model once for simplicity
-fit_MBO <- FactorHet(Chosen_Immigrant ~ Plans + Ed + Country,
+fit <- FactorHet(Chosen_Immigrant ~ Plans + Ed + Country,
  design = immigration, lambda = 1e-4,
- initialize = FactorHet_init(nrep = 1),
+ # Randomly initialize, do only one iteration for speed
+ init = FactorHet_init(nrep = 1),
+ control = FactorHet_control(init = 'random_member'),
  K = 2, group = ~ CaseID, task = ~ contest_no, 
  choice_order = ~ choice_id)
-immigration$pred_FH <- predict(fit_MBO)  
+immigration$pred_FH <- predict(fit)  
 }

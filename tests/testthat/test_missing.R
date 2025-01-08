@@ -1,5 +1,20 @@
 context('Test that model runs on unusual data')
 
+if (isTRUE(as.logical(Sys.getenv("CI")))){
+  # If on CI
+  NITER <- 2
+  env_test <- "CI"
+}else if (!identical(Sys.getenv("NOT_CRAN"), "true")){
+  # If on CRAN
+  NITER <- 2
+  env_test <- "CRAN"
+  set.seed(20)
+}else{
+  # If on local machine
+  NITER <- 2000
+  env_test <- 'local'
+}
+
 test_that('FactorHet runs with missing data (ungrouped)', {
   
   dta <- data.frame(

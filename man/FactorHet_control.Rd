@@ -3,12 +3,12 @@
 \encoding{UTF-8}
 \name{FactorHet_control}
 \alias{FactorHet_control}
-\title{Control for FactorHet Estimation}
+\title{Control for FactorHet estimation}
 \usage{
 FactorHet_control(
   iterations = 1000,
-  maxit_pi = 25,
-  optim_phi_controls = NULL,
+  maxit_pi = NULL,
+  optim_phi_controls = list(method = "lib_lbfgs"),
   prior_var_phi = 4,
   prior_var_beta = Inf,
   gamma = 1,
@@ -17,16 +17,17 @@ FactorHet_control(
   init_method = "short_EM",
   return_data = FALSE,
   log_method = "log_ginv",
-  tolerance.parameters = 1e-04,
+  tolerance.parameters = 1e-05,
   tolerance.logposterior = 1e-05,
   rare_threshold = 5,
   rare_verbose = 1,
-  beta_method = "cg",
+  beta_method = "cpp",
   beta_cg_it = 25,
   lambda_scale = "N",
   weight_dlist = FALSE,
   do_SQUAREM = TRUE,
-  backtrack_SQUAREM = 3,
+  step_SQUAREM = NULL,
+  backtrack_SQUAREM = 10,
   df_method = "EM",
   forced_randomize = FALSE,
   single_intercept = NULL,
@@ -34,6 +35,7 @@ FactorHet_control(
   tau_stabilization = 5,
   tau_truncate = 1e+06,
   debug = FALSE,
+  force_reset = FALSE,
   calc_df = TRUE,
   calc_se = TRUE,
   quiet_tictoc = TRUE,
@@ -41,134 +43,193 @@ FactorHet_control(
 )
 }
 \arguments{
-\item{iterations}{Number of iterations for the algorithm.}
+\item{iterations}{A numerical value setting the maximum number of iterations used in
+the algorithm. The default is 1000.}
 
-\item{maxit_pi}{Number of steps of L-BFGS-B to perform. Default of 25.}
+\item{maxit_pi}{An argument setting the maximum number of iterations used in
+each M-Step that updates the moderators. The default is \code{NULL} and
+uses default settings in optimizer. For \code{"lib_lbfgs"}, this optimizes
+until convergence is obtained.}
 
-\item{optim_phi_controls}{Options to \link{optim} to numerically optimize
-moderator parameters.}
+\item{optim_phi_controls}{A list of options for optimizer used in updating
+the moderator
+parameters. A method must be provided at minimum, e.g., \code{list(method =
+"lib_lbfgs")}. \code{"lib_lbfgs"} uses \code{\link[lbfgs]{lbfgs}} from the
+accompanying package. All other options use the base \code{\link{optim}}
+function in \code{R}. The maximum number of iterations should be specified
+via \code{maxit_pi}. All other options are specified through this argument.}
 
-\item{prior_var_phi}{Variance of multivariate normal prior on moderator
-coefficients.}
+\item{prior_var_phi}{A numerical value that encodes the variance of
+multivariate normal prior on moderator coefficients. \bold{Note:} The
+moderators are not standardized internally and thus should be on broadly
+comparable scales to avoid differential amounts of regularization on
+different moderators. The default value is 4.}
 
-\item{prior_var_beta}{Variance of normal prior on each treatment effect
-coefficient. Set to \code{Inf} by default when using sparse estimation.}
+\item{prior_var_beta}{A numerical value of normal prior on each treatment
+effect coefficient. The default is \code{Inf} when using sparse estimation.
+A different value can be set when using "ridge" regression, i.e.
+\code{lambda=0}.}
 
-\item{gamma}{Determines whether sparsity-inducing prior be "spread" across
-clusters in proportion to the average prior probability of membership. See
-the Städler et al. (2010) for discussion.}
+\item{gamma}{A non-negative numerical value that determines whether
+sparsity-inducing prior be "spread" across groups in proportion to the
+average prior probability of membership. Default of 1; see Städler et al.
+(2010) and Goplerud et al. (2025) for more discussion.}
 
-\item{repeat_beta}{Default of "1"; higher numbers repeat the "E-M" step for
-updating \code{beta} multiple times before performing optimization of
-moderator parameters.}
+\item{repeat_beta}{An integer setting the number of times to repeat the E-M
+cycle for updating \eqn{\beta} before moving to update the moderator
+parameters \eqn{\phi}. The default is 1.}
 
-\item{adaptive_weight}{Should weights be given to the penalties? By default
-it imposes Bondell and Reich (2009) weights (\code{"B&R"}). Please see
-Goplerud et al. (2022) for discussion. If a matrix is provided (e.g. from a
-prior run of \code{FactorHet}, this can be used to set up an "adaptive
+\item{adaptive_weight}{An argument that determines the weights given to
+different terms in the penalty function. The default (\code{"B&R"}) uses
+Bondell and Reich (2009), generalized appropriately if needed, see Goplerud
+et al. (2025) for discussion. If a matrix is provided (e.g. from a prior
+run of \code{\link{FactorHet}}), this can be used to set up an "adaptive
 overlapping group LASSO". \code{"none"} imposes no weights. To use a matrix
-and \emph{not} use Bondell and Reich weights, set \code{override_BR =
+and \emph{not} use Bondell and Reich weights, additional set \code{override_BR =
 TRUE}.}
 
-\item{init_method}{Method for initializing model. Can accept a string of
-\code{"kmeans"} (k-means clustering on the moderators), \code{"mclust"}
-(\code{"mclust"} on the moderators), \code{"random_pi"} (random
-probabilities of cluster membership for each person),
-\code{"random_member"} (random hard assignment), \code{"random_beta"}
-(random coefficients). More commonly, this can be set with a named list
-with cluster membership probabilities. This should consist of a named list
-with a single element \code{"group_E.prob"} that is a data.frame which
+\item{init_method}{An argument for initializing the algorithm. One set of
+options are different character values: \code{"kmeans"} (k-means clustering
+on the moderators), \code{"mclust"} (\code{"mclust"} on the moderators),
+\code{"random_pi"} (random probabilities of group membership for each
+person), \code{"random_member"} (random hard assignment),
+\code{"random_beta"} (random coefficients). This can be set with a named
+list with group membership probabilities. This should consist of a named
+list with a single element \code{"group_E.prob"} that is a data.frame which
 contains probabilities for each group/unit with the column names
-\code{"group"} and then \code{"cluster_[0-9]+"} depending on \code{K}. A
-full set of parameters can be provided, although this is only used
-internally for debugging.
-be set using the options in \link{FactorHet_mbo_control} as most users will
-calibrate the regularization using \code{FactorHet_mbo}.}
+\code{"group"} and then \code{"group_[0-9]+"} depending on \code{K}. In
+general, when using \code{\link{FactorHet_mbo}}, this argument is not used
+and rather set via the relevant options in
+\code{\link{FactorHet_mbo_control}} as this will ensure the same
+initialization for all runs of \code{FactorHet_mbo}.}
 
-\item{return_data}{Return the formatted data; default of \code{FALSE}.}
+\item{return_data}{A logical value for whether the formatted data should be
+returned. The default is \code{FALSE}.}
 
-\item{log_method}{Method for dealing with latent overlapping groups. "log_"
-implements latent overlapping groups (see Yan and Bien 2017; see also the
-supporting information of Goplerud et al. 2022). The projection matrix can
-be either the generalized inverse extending Post and Bondell (2013)
-(default: \code{"log_ginv"}), a random matrix (\code{"log_random"}), or
-zero (\code{"log_0"}). \code{"standard"} does not implement overlapping
-groups.}
+\item{log_method}{An argument for specifying whether latent overlapping
+groups should be used when interactions are included. The default is
+\code{"log_ginv"}. Options beginning with \code{"log_"} employ latent
+overlapping groups (see Yan and Bien 2017 and the supporting information of
+Goplerud et al. 2025). The projection matrix can be either the generalized
+inverse extending Post and Bondell (2013) (\code{"log_ginv"}), a random
+matrix (\code{"log_random"}), or zero (\code{"log_0"}). \code{"standard"}
+does not implement overlapping groups.}
 
-\item{tolerance.parameters}{Convergence criterion when no parameter changes
-by more than this amount.}
+\item{tolerance.parameters}{A numerical value setting the one convergence
+criterion: When no parameter changes by more than this
+amount, terminate the algorithm. Default is 1e-5.}
 
-\item{tolerance.logposterior}{Convergence criterion when the log-posterior
-changes by less than this amount.}
+\item{tolerance.logposterior}{A numerical value setting the one convergence
+criterion: When the log-posterior changes by less than this amount,
+terminate the algorithm. Default is 1e-5.}
 
-\item{rare_threshold}{Remove interactions with fewer than this many
-observations.}
+\item{rare_threshold}{A numerical value setting the threshold for which
+interactions should be excluded. If an interaction of two factors has fewer
+than \code{rare_threshold} observations, the corresponding interaction term
+will not be included. This is a way to enforce randomization restrictions.
+The default is \code{5} but setting it to 0 will ensure that all
+interactions are included. The documentation of \code{\link{FactorHet}}
+provides more discussion.}
 
-\item{rare_verbose}{Print information about factors removed.}
+\item{rare_verbose}{A logical value as to whether to print information about
+the rare interactions. The default is \code{TRUE}.}
 
-\item{beta_method}{Method for updating beta, e.g. "cpp" or "base R".}
+\item{beta_method}{A character value for the method by which \eqn{\beta} is
+updated. The default is \code{"cpp"}. An alternative that uses conjugate
+gradient (\code{"cg"}) is faster per-iteration but may introduce numerical
+differences across platforms.}
 
-\item{beta_cg_it}{If using conjugate gradient, how many steps?}
+\item{beta_cg_it}{A numerical value of the number of conjugate gradient steps
+to use if \code{beta_method = "cg"}.}
 
-\item{lambda_scale}{Function for internally rescaling lambda to be a function
-of N. Options are \code{"N"} (default; \code{lambda * N}), \code{"unity"}
-(i.e. no rescaling), or \code{"root_N"} (\code{lambda * sqrt(N)}).}
+\item{lambda_scale}{A function for internally rescaling lambda to be a
+function of \eqn{N}. Options are \code{"N"} (default; \code{lambda * N}),
+\code{"unity"} (i.e. no rescaling), or \code{"root_N"} (\code{lambda *
+sqrt(N)}).}
 
-\item{weight_dlist}{Weight additional penalties following Hastie and Lim
-(2015)? Default of \code{FALSE}}
+\item{weight_dlist}{A logical value for whether to weight additional
+penalties following Hastie and Lim (2015). The default is \code{FALSE}.}
 
-\item{do_SQUAREM}{Perform SQUAREM to accelerate convergence. Strongly
-recommended to keep as \code{TRUE}.}
+\item{do_SQUAREM}{A logical value for whether to perform SQUAREM to
+accelerate convergence. The default is \code{TRUE}.}
 
-\item{backtrack_SQUAREM}{The number of backtracking steps to perform for
-SQUAREM.}
+\item{step_SQUAREM}{An argument specifying the step size to use for SQUAREM.
+The default is \code{NULL} which uses a data-driven step size. This
+generally performs well, but may introduce numerical differences across
+machines. See the documentation of \code{\link{FactorHet}} for more
+discussion.}
 
-\item{df_method}{Method for calculating degrees of freedom. Default of
-\code{"EM"} follows Goplerud et al. (2022) and calculates the degrees of
-freedom using the Polya-Gamma weights. \code{"IRLS"} uses p_{ik} (1 -
-p_{ik}) as weights, where p_{ik} = Pr(y_i = 1 | z_i = k).
+\item{backtrack_SQUAREM}{An integer that sets the number of backtracking
+steps to perform for SQUAREM. The default is 10.}
+
+\item{df_method}{A character value specifying the method calculating degrees
+of freedom. Default of \code{"EM"} follows Goplerud et al. (2025) and
+calculates the degrees of freedom using the Polya-Gamma weights.
+\code{"IRLS"} uses \eqn{\zeta_{ik} (1 -
+\zeta_{ik})} as weights, 
+where \eqn{\zeta_{ik} = Pr(y_i = 1 | X_i, z_i = k)}.
 \code{"free_param"} counts the number of parameters after fusion and
 accounting for the sum-to-zero constraints. Use \code{"all"} to estimate
 all methods and compare.}
 
-\item{forced_randomize}{For each task, randomize which is "left" and "right".
-Default of \code{FALSE}.}
+\item{forced_randomize}{A logical value that indicates, in the forced-choice
+setting, whether the "left" and "right" profiles should be randomized for
+each task. The default is \code{FALSE}.}
 
-\item{single_intercept}{Should a single intercept be used across clusters?
-Default of \code{NULL} uses a single intercept if forced-choice and a
-varying intercept if factorial.}
+\item{single_intercept}{A logical value or \code{NULL} that indicates whether
+a single intercept should be used across groups. The default is \code{NULL}
+which uses a single intercept if the study is a forced-choice conjoint
+(i.e., \code{choice_order} is used) and a varying intercept by group
+otherwise.}
 
-\item{tau_method}{Method for dealing with binding restrictions, i.e.
-numerically infinite E[1/tau^2] The two options are \code{"nullspace"}
-(i.e. perform inference assuming this restriction binds) or \code{"clip"}
-(set to a large value.) \code{"nullspace"} is preferred.}
+\item{tau_method}{A character value indicating the method for dealing with
+binding restrictions, i.e. numerically infinite \eqn{E[1/\tau^2]}. The two
+options are \code{"nullspace"} (i.e. perform inference assuming this
+restriction binds) or \code{"clip"} (set to a large value
+\code{tau_truncate}). The default is \code{"nullspace"}.}
 
-\item{tau_stabilization}{Perform this many steps of the algorithm with
-\code{"clip"} (see \code{tau_method}) to avoid initial instability.}
+\item{tau_stabilization}{An integer value of the number of steps to perform
+with \code{tau_method="clip"} before using the provided setting. The
+default is 5.}
 
-\item{tau_truncate}{Value to either clip tau (i.e. set maximum E[1/tau^2] or
-set in nullspace depending on \code{tau_method}).}
+\item{tau_truncate}{A numerical value to either truncate \eqn{E[1/\tau^2]}
+(i.e. set maximum \eqn{E[1/\tau^2]} in the E-Step for updating \eqn{\beta})
+if \code{tau_method = "clip"} or a threshold by which to declare that two
+levels are fused if 
+\code{tau_method="nullspace"}. The default is 1e6.}
 
-\item{debug}{Verify log-posterior at each step and show size of nullspace.}
+\item{debug}{A logical value for whether the algorithm should be debugged.
+The default is \code{FALSE}. In particular, it will verify that the
+log-posterior increases at each (intermediate) step and throw an exception
+otherwise.}
 
-\item{calc_df}{Calculate degrees of freedom of final model. Default of
-\code{TRUE}.}
+\item{force_reset}{A logical argument about how the nullspace is computed. If
+\code{tau_method="nullspace"}, it forces nullspace to be estimated directly
+from all binding restrictions at each iteration versus the default method
+that updates the existing basis when possible. Default is \code{FALSE}.}
 
-\item{calc_se}{Calculate standard errors of final model. Default of
-\code{TRUE}.}
+\item{calc_df}{A logical value for whether to calculate degrees of freedom of
+final model. The default is \code{TRUE}.}
 
-\item{quiet_tictoc}{Do not print timing information from tictoc.}
+\item{calc_se}{A logical value for whether standard errors of final model.
+The default is \code{TRUE}.}
 
-\item{override_BR}{Ignore Bondell and Reich style-weights. Instead, use
-\code{sqrt(L) * (L + 1)} where \code{L} is the number of factor levels.}
+\item{quiet_tictoc}{A logical value for whether to \emph{not} print
+information about the timing of the model. The default is \code{TRUE}.}
+
+\item{override_BR}{A logical value for whether to ignore Bondell and Reich
+style-weights. The default is \code{FALSE}. If \code{TRUE} is provided,
+\code{sqrt(L) * (L + 1)} is used, where \code{L} is the number of factor
+levels.}
 }
 \description{
-Set control arguments for estimation FactorHet. Arguments around the
-initialization of the model (important when \code{K > 1}) can be set via
-\link{FactorHet_init} and arguments for the model-based optimization tuning
-of \code{lambda} can be found in \link{FactorHet_mbo_control}. The parameters
-can be divided into ones governing the model priors, model estimation, and
-miscellaneous settings. All arguments have default values.
+Provides a set of control arguments to \code{\link{FactorHet}}. Arguments
+around the initialization of the model (important when \code{K > 1}) can be
+set via \code{\link{FactorHet_init}} and arguments for the model-based
+optimization tuning of regularization strength \eqn{\lambda} can be found in
+\code{\link{FactorHet_mbo_control}}. The parameters can be divided into ones
+governing the model priors, model estimation, and miscellaneous settings. All
+arguments have default values.
 }
 \examples{
 str(FactorHet_control())
@@ -178,7 +239,7 @@ str(FactorHet_control())
 Bondell, Howard D., and Brian J. Reich. 2009. "Simultaneous Factor Selection
 and Collapsing Levels in ANOVA." Biometrics 65(1): 169-177.
 
-Goplerud, Max, Kosuke Imai, and Nicole E. Pashley. 2022. "Estimating
+Goplerud, Max, Kosuke Imai, and Nicole E. Pashley. 2025. "Estimating
 Heterogeneous Causal Effects of High-Dimensional Treatments: Application to
 Conjoint Analysis." arxiv preprint: \url{https://arxiv.org/abs/2201.01357}
 

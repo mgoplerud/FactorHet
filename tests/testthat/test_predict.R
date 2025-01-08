@@ -1,5 +1,20 @@
 context('Test prediction functions')
 
+if (isTRUE(as.logical(Sys.getenv("CI")))){
+  # If on CI
+  NITER <- 2
+  env_test <- "CI"
+}else if (!identical(Sys.getenv("NOT_CRAN"), "true")){
+  # If on CRAN
+  NITER <- 2
+  env_test <- "CRAN"
+  set.seed(3)
+}else{
+  # If on local machine
+  NITER <- 2000
+  env_test <- 'local'
+}
+
 test_that('Predict and OOS works for K = 1', {
   
   dta <- data.frame(
@@ -67,7 +82,7 @@ test_that('Predict and OOS works for K = 2', {
     
     manual_prob_yes <- apply(manual_pred, MARGIN = 2, plogis)
     
-    expect_equivalent(manual_prob_yes, detailed_pred$prediction_by_cluster)
+    expect_equivalent(manual_prob_yes, detailed_pred$prediction_by_group)
     
     mod_phi <- est_simple$parameters$phi[,'mod']
     mod_phi <- mod_phi[-1] * test_data$mod

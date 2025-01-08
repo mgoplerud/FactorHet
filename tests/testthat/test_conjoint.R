@@ -1,5 +1,20 @@
 context('Test grouped')
 
+if (isTRUE(as.logical(Sys.getenv("CI")))){
+  # If on CI
+  NITER <- 2
+  env_test <- "CI"
+}else if (!identical(Sys.getenv("NOT_CRAN"), "true")){
+  # If on CRAN
+  NITER <- 2
+  env_test <- "CRAN"
+  set.seed(2)
+}else{
+  # If on local machine
+  NITER <- 2000
+  env_test <- 'local'
+}
+
 test_that('Runs with groups and tasks; post-estimation functions work', {
 
   N <- 1000
@@ -25,12 +40,12 @@ test_that('Runs with groups and tasks; post-estimation functions work', {
   test_plot <- tryCatch(cjoint_plot(est_simple), error = function(e){NULL})
   expect_false(is.null(test_plot))
   #Check that getting marginal treatment effects works
-  test_mfe <- tryCatch(marginal_AME(est_simple, verbose = FALSE), error = function(e){NULL})
+  test_mfe <- tryCatch(AME(est_simple, verbose = FALSE), error = function(e){NULL})
   expect_false(is.null(test_mfe))
   #Same for ACE, AMIE
-  test_mfe <- tryCatch(marginal_ACE(est_simple, verbose = FALSE, baseline = list(state = 'Arizona', letter = 'c')), error = function(e){NULL})
+  test_mfe <- tryCatch(ACE(est_simple, verbose = FALSE, baseline = list(state = 'Arizona', letter = 'c')), error = function(e){NULL})
   expect_false(is.null(test_mfe))
-  test_mfe <- tryCatch(marginal_AMIE(est_simple, verbose = FALSE, baseline = list(state = 'Arizona', letter = 'c')), error = function(e){NULL})
+  test_mfe <- tryCatch(AMIE(est_simple, verbose = FALSE, baseline = list(state = 'Arizona', letter = 'c')), error = function(e){NULL})
   expect_false(is.null(test_mfe))
 })
 

@@ -1,5 +1,20 @@
 context('Test limiting cases (other)')
 
+if (isTRUE(as.logical(Sys.getenv("CI")))){
+  # If on CI
+  NITER <- 2
+  env_test <- "CI"
+}else if (!identical(Sys.getenv("NOT_CRAN"), "true")){
+  # If on CRAN
+  NITER <- 2
+  env_test <- "CRAN"
+  set.seed(11)
+}else{
+  # If on local machine
+  NITER <- 2000
+  env_test <- 'local'
+}
+
 test_that('Non-flat prior and lambda = 0, check convergence', {
   
   dta <- data.frame(
@@ -14,8 +29,9 @@ test_that('Non-flat prior and lambda = 0, check convergence', {
       
       est_simple <- FactorHet(formula = y ~ state + letter, 
         design = dta, K = 2, lambda = 0, moderator = ~ mod,
+        initialize = FactorHet_init(nrep = ifelse(NITER > 2, 5, 1), short_EM_it = NITER),
         control = FactorHet_control(prior_var_beta = 1, gamma = gamma,
-        single_intercept = single_intercept)
+        single_intercept = single_intercept, iterations = NITER)
       )
       expect_true(min(diff(logLik(est_simple, 'log_posterior_seq'))) > 0)
     }

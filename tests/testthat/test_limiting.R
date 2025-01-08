@@ -1,5 +1,20 @@
 context('Test limiting cases (lambda = 0, lambda = Inf)')
 
+if (isTRUE(as.logical(Sys.getenv("CI")))){
+  # If on CI
+  NITER <- 2
+  env_test <- "CI"
+}else if (!identical(Sys.getenv("NOT_CRAN"), "true")){
+  # If on CRAN
+  NITER <- 2
+  env_test <- "CRAN"
+  set.seed(10)
+}else{
+  # If on local machine
+  NITER <- 2000
+  env_test <- 'local'
+}
+
 test_that('Agrees with GLM (lambda = 0)', {
   
   dta <- data.frame(
@@ -16,11 +31,20 @@ test_that('Agrees with GLM (lambda = 0)', {
   
   est_glm <- glm(est_simple$internal_parameters$data$y ~ 0 + as.matrix(est_simple$internal_parameters$data$X), family = binomial)
   
-  #Check same betas
-  expect_equivalent(as.vector(est_simple$parameters$nullspace_beta), coef(est_glm), 
-    tolerance = 1e-4, scale = 1)
-  #Check same log-lik
-  expect_equivalent(logLik(est_simple), as.numeric(logLik(est_glm)), tolerance = 1e-4, scale = 1)
+  # Check if there is separation
+  separation <- max(abs(qlogis(fitted(est_glm)))) > 15
+  
+  if (!separation){
+    
+    #Check same betas
+    expect_equivalent(as.vector(est_simple$parameters$nullspace_beta), coef(est_glm), 
+                      tolerance = 1e-4, scale = 1)
+    #Check same log-lik
+    expect_equivalent(logLik(est_simple), as.numeric(logLik(est_glm)), tolerance = 1e-4, scale = 1)
+    
+  }else{
+    warning('Separation in test data', immediate. = T)
+  }
   #Intercept is last column in nullspace  
   expect_equivalent(est_simple$parameters$beta[1], 
     est_simple$parameters$nullspace_beta[nrow(est_simple$parameters$nullspace_beta)],

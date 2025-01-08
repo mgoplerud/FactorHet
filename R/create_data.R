@@ -1,6 +1,7 @@
 # Parse the formula
 prepare_formula <- function(fmla_main, fmla_moderator = NULL, weights = NULL,
   design, group = NULL, choice_order = NULL, task = NULL, delete_response = FALSE){
+  
   #
   # Parse MAIN formula:
   #
@@ -85,7 +86,7 @@ prepare_formula <- function(fmla_main, fmla_moderator = NULL, weights = NULL,
   
   # Save out the weights after removing NA and remove placeholder column.
   weights <- design[[".sw"]]
-  design <- design[, names(design) != ".sw"]
+  design <- design[, names(design) != ".sw", drop = FALSE]
   
   if (nrow(design) == 0){stop('design has no observations after listwise deletion.')}
   #  
@@ -110,7 +111,6 @@ prepare_formula <- function(fmla_main, fmla_moderator = NULL, weights = NULL,
   # Reconstruct the exact formula used
   formula_recons <- paste(outcome, ' ~ ', 
                           paste(c(raw_factor_names, sapply(raw_do_interactions, paste, collapse=':')), collapse='  + '))
-  
   formula_mod <- paste(' ~ ', paste(attr(terms_mod, 'term.labels'), collapse = ' + '))
   if (formula_mod == ' ~  '){formula_mod <- ' ~ 1'}
   output <- list(design, outcome, factor_names, formula_recons, formula_mod, do_interactions, 
@@ -150,7 +150,6 @@ prepare_formula <- function(fmla_main, fmla_moderator = NULL, weights = NULL,
 #' @keywords internal
 #' @param design Data frame with levels of each factor assigned to observation i
 #' @param penalty_for_regression An object from "create_penalty"
-#' @importFrom dplyr select
 #' @import Matrix
 create_data <- function(design, penalty_for_regression, warn_missing = TRUE, verif_row = TRUE, remove_cols = Inf){
   if (nrow(design) == 0){stop('No observations!')}
@@ -163,8 +162,9 @@ create_data <- function(design, penalty_for_regression, warn_missing = TRUE, ver
   n_obs <- nrow(design)
   X <- matrix(nrow = 0, ncol = 2)
   
-  design <- as.data.frame(dplyr::select(.data = data.frame(design, check.names = FALSE), 
-    penalty_for_regression$J_names))
+  design <- data.frame(design, check.names = FALSE)[penalty_for_regression$J_names]
+  # design <- as.data.frame(select(.data = data.frame(design, check.names = FALSE), 
+  #   penalty_for_regression$J_names))
   
   for (j in 1:J){
     match_main <- match(paste0(J_names[j], '(', design[, j], ')'), coef_names)
@@ -368,7 +368,7 @@ remove_rare_levels <- function(X, penalty_for_regression, rare_threshold, verbos
   }
 
   # Remove the rare columns from the design
-  rare_X <- X[, -rare_columns,,drop=F]
+  rare_X <- X[, -rare_columns, drop=F]
   # Remove the rare columns from the penalty, i.e.
   # from the list of terms
   penalty_for_regression$term_position <- penalty_for_regression$term_position[-rare_columns,,drop=F]

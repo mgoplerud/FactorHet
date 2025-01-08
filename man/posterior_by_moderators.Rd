@@ -2,7 +2,7 @@
 % Please edit documentation in R/visualization_functions.R
 \name{posterior_by_moderators}
 \alias{posterior_by_moderators}
-\title{Visualize the Posterior by Observed Moderators}
+\title{Visualize the posterior by observed moderators}
 \usage{
 posterior_by_moderators(
   object,
@@ -11,9 +11,9 @@ posterior_by_moderators(
 )
 }
 \arguments{
-\item{object}{A model fit using FactorHet}
+\item{object}{A model fit using \code{\link{FactorHet}} or \code{\link{FactorHet_mbo}}.}
 
-\item{visualize}{Which types of moderators to show? Default (\code{"all"})
+\item{visualize}{Specifies which types of moderators to show. Default (\code{"all"})
 shows all moderators. Other options include \code{"discrete"} and
 \code{"continuous"}.}
 
@@ -26,7 +26,7 @@ A list of each of the types of analyses is reported. Each element of
 }
 \description{
 Provides univariate summaries of the estimated posterior predictive
-probabilities of cluster membership by the moderators. Can produce analyses
+probabilities of group membership by the moderators. Can produce analyses
 for continuous variables (weighted boxplot) or discrete variables (row/column
 tables).
 }
@@ -34,20 +34,32 @@ tables).
 \bold{Discrete Moderators}: Discrete moderators are shown by either a
   \code{"row"}, \code{"column"}, or \code{"bar"} plot. In the \code{"row"}
   plot, the quantity reported is, for each level of the moderator, what
-  proportion of people fall into which cluster? That is, for moderator value
-  "a", 25\% of people are in cluster 1 and 75\% of people are in cluster 2.
-  This is estimated using a weighted average by the estimated posterior
-  predictive probabilities of cluster membership and any survey weights.
+  proportion of people fall into each group. For example, for moderator value
+  "a", 25\% of people are in group 1 and 75\% of people are in group 2.
+  This is estimated using a weighted average, weighting by the estimated posterior
+  predictive probabilities of group membership and any survey weights.
   
-  By contrast the \code{"column"} and \code{"bar"} reports the distribution
-  by cluster. That is, for Cluster 1, 30\% of people have moderator value "f",
-  50% have moderator value "g", and 20\% have moderator value "h".
+  By contrast \code{"column"} and \code{"bar"} reports the distribution
+  by group. For example, for Group 1, 30\% of people have moderator value "f",
+  50\% have moderator value "g", and 20\% have moderator value "h".
   \code{"bar"} reports this as a bar chart whereas \code{"column"} reports as a
   tile plot.
   
   For all three types of plots, the data is provided in the returned output.
   
   \bold{Continuous Moderators}: Continuous moderators are shown by a
-  histogram of the value for each cluster, weighted by each observation's
-  posterior predictive probability of being in that cluster.
+  histogram of the value for each group, weighted by each observation's
+  posterior predictive probability of being in that group.
+}
+\examples{
+data(immigration)
+set.seed(15)
+# Estimate model with arbitrary choice of lambda
+fit <- FactorHet(Chosen_Immigrant ~ Plans + Ed + Country,
+  design = immigration, lambda = 1e-2,
+  moderator = ~ party_ID,
+  K = 2, group = ~ CaseID,
+  control = FactorHet_control(init = 'mclust'),
+  task = ~ contest_no, choice_order = ~ choice_id)
+posterior_by_moderators(fit)
 }
