@@ -311,10 +311,10 @@ EM_analysis <- function(formula, design, K, lambda, weights = NULL,
       c(
         'weights are not constant within group (e.g. person) across tasks.',
         paste0('disagreement amount is ', round(dis_amount, 7)),
-        'Please contact maintainer and report bug.'
+        'Please contact maintainer and report bug if this a non-trivial amount.'
       ), collapse = '\n'
     )
-    stop(msg)
+    warning(msg)
   }
   std_weights <- 1/sum(weights_W) * nrow(W)
   weights_W <- weights_W * std_weights
