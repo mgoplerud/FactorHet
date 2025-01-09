@@ -6,8 +6,12 @@ Authors@R: c(
   person("Max", "Goplerud", role = c("aut", "cre"), email = "mgoplerud@austin.utexas.edu"),
   person(given=c("Nicole", "E."), "Pashley", role = c("aut"), email = "nicole.pashley@rutgers.edu"),
   person("Kosuke", "Imai", role = c("aut"), email = "imai@harvard.edu"))
-Maintainer: Max Goplerud <mgoplerud@austin.utexas.edu>
-Description: Estimates heterogeneous effects in factorial (and conjoint) models. The methodology employs a Bayesian finite mixture of regularized logistic regressions, where moderators can affect each observation's probability of group membership and a sparsity-inducing prior fuses together levels of each factor while respecting ANOVA-style sum-to-zero constraints. Goplerud, Imai, and Pashley (2024) <doi:10.48550/ARXIV.2201.01357> provides full details.
+Description: Estimates heterogeneous effects in factorial (and conjoint) models. 
+    The methodology employs a Bayesian finite mixture of regularized logistic
+    regressions, where moderators can affect each observation's probability of 
+    group membership and a sparsity-inducing prior fuses together levels of each 
+    factor while respecting ANOVA-style sum-to-zero constraints. Goplerud, Imai, 
+    and Pashley (2024) <doi:10.48550/ARXIV.2201.01357> provide further details.
 Depends: R (>= 3.4.0)
 License: GPL (>= 2)
 Encoding: UTF-8
@@ -19,3 +23,5 @@ Suggests:
     FNN, RSpectra, mclust, ranger,
     tgp, testthat, covr, tictoc
 LazyData: true
+URL: https://github.com/mgoplerud/FactorHet
+BugReports: https://github.com/mgoplerud/FactorHet/issues
