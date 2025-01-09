@@ -305,7 +305,7 @@ EM_analysis <- function(formula, design, K, lambda, weights = NULL,
   
   weights_W <- Diagonal(x = 1/colSums(group_mapping)) %*% t(group_mapping) %*% weights
   weights_sq_W <- Diagonal(x = 1/colSums(group_mapping)) %*% t(group_mapping) %*% weights^2
-  if (any(abs(as.vector(weights_sq_W - weights_W^2)) > sqrt(.Machine$double.eps))){
+  if (any(abs(as.vector(weights_sq_W - weights_W^2)) > 1e-6)){
     dis_amount <- max(abs(as.vector(weights_sq_W - weights_W^2)))
     msg <- paste(
       c(
@@ -314,7 +314,7 @@ EM_analysis <- function(formula, design, K, lambda, weights = NULL,
         'Please contact maintainer and report bug if this a non-trivial amount.'
       ), collapse = '\n'
     )
-    warning(msg)
+    stop(msg)
   }
   std_weights <- 1/sum(weights_W) * nrow(W)
   weights_W <- weights_W * std_weights
