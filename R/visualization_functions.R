@@ -380,6 +380,10 @@ margeff_moderators <- function(object, newdata = NULL, vcov = TRUE,
                           quant_continuous = c(0.25, 0.75),
                           abs_diff = FALSE){
   
+  if (!inherits(object, 'FactorHet')){
+    stop('object must be from FactorHet')
+  }
+  
   phi <- coef(object, 'phi')
   K <- nrow(phi)
   if (K == 1){stop('No moderators when K = 1.')}

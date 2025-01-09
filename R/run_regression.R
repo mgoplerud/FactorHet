@@ -917,7 +917,7 @@ EM_analysis <- function(formula, design, K, lambda, weights = NULL,
     obs.E.prob <- apply(group_E.prob, MARGIN = 2, FUN=function(i){as.vector(group_mapping %*% i)})
     
     beta <- sapply(list_from_cols(obs.E.prob), FUN=function(k){
-      simple_logit(y = y[which(k == 1)], X = X[which(k == 1),], iterations = 10, 
+      simple_logit(y = y[which(k == 1)], X = X[which(k == 1),,drop=FALSE], iterations = 10, 
                    weights = weights[which(k == 1)],
                    beta_method = 'cg', beta_cg_it = 10, prec_ridge = 1)
       #coef(bayesglm(y ~ 0 + as.matrix(X), weights = k[match(group, unique_group)], family = binomial))
@@ -1804,7 +1804,7 @@ EM_analysis <- function(formula, design, K, lambda, weights = NULL,
     moderator = store_moderator)
   
   # final_tol <- sqrt(.Machine$double.eps)
-  final_tol <- 1e-7
+  final_tol <- 1e-6
   if (any(diff(store_ll[,1]) < -final_tol)){
     warning('log_posterior decreased during estimation;\ncheck logLik(fit, "log_posterior_seq") for pathological behavior.', immediate. = TRUE)
   }
