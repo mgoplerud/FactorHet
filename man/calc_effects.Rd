@@ -95,8 +95,8 @@ additional restrictions. "Details" provides more information about the use
 of this function.}
 }
 \value{
-\item{plot}{The ggplot2 visualization of the marginal effects.}
-\item{data}{The data used to create the ggplot2 visualization.}
+Returns a named list with the underlying data (\code{"data"}) and the
+  plot (\code{"plot"}).
 }
 \description{
 Calculate the average marginal (component) effect (AME or AMCE), the average

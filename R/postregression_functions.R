@@ -325,7 +325,8 @@ make_plot_AME <- function(store_mfx, ignore_bl = FALSE, bl_shape = 16, facet = T
 #'   computing the marginal effects. The default is \code{NULL}, i.e. no
 #'   additional restrictions. "Details" provides more information about the use
 #'   of this function.
-#' 
+#' @return Returns a named list with the underlying data (\code{"data"}) and the
+#'   plot (\code{"plot"}).
 #' @references 
 #'   
 #'   Egami, Naoki and Kosuke Imai. 2019. "Causal Interaction in
@@ -338,9 +339,6 @@ make_plot_AME <- function(store_mfx, ignore_bl = FALSE, bl_shape = 16, facet = T
 #'  
 #'   Leeper, Thomas J., Sara B. Hobolt, and James Tilley. 2020. "Measuring Subgroup
 #'   Preferences in Conjoint Experiments." \emph{Political Analysis}. 28(2):207-221.
-#'
-#' @return \item{plot}{The ggplot2 visualization of the marginal effects.}
-#' \item{data}{The data used to create the ggplot2 visualization.}
 #' 
 #' @details 
 #' 
