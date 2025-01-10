@@ -46,11 +46,11 @@ create_moderator <- function(moderator, group, unique_group, design,
   if (!is.null(W_full)){
     # W_full <- unique(group_by(data.frame(group, as.data.frame(W_full), stringsAsFactors = F, check.names = FALSE)))
     W_full <- unique(data.frame(group, as.data.frame(W_full),
-        stringsAsFactors = F, check.names = FALSE))
-    W_full <- as.matrix(W_full[,-1,drop=F])
+        stringsAsFactors = FALSE, check.names = FALSE))
+    W_full <- as.matrix(W_full[,-1,drop = FALSE])
   }
-  W_group <- as.vector(W[,1,drop=T])
-  W <- as.matrix(W[,-1,drop=F])
+  W_group <- as.vector(W[,1,drop = TRUE])
+  W <- as.matrix(W[,-1,drop = FALSE])
   stopifnot(all.equal(W_group, unique_group))
   
   if (check_rank){

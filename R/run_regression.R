@@ -207,7 +207,7 @@ EM_analysis <- function(formula, design, K, lambda, weights = NULL,
         tab_cols <- table(design[[combo_i[1]]], design[[combo_i[2]]])
         if (any(tab_cols == 0)){
           
-          ind_restrict <- which(tab_cols == 0, arr.ind = T)
+          ind_restrict <- which(tab_cols == 0, arr.ind = TRUE)
           ind_restrict <- cbind(rownames(tab_cols)[ind_restrict[,'row']],
                                 colnames(tab_cols)[ind_restrict[,'col']])
           ind_restrict <- paste(combo_i[1], '(', ind_restrict[,1], ')-', combo_i[2], '(', ind_restrict[,2] ,')', sep = '')
@@ -888,7 +888,7 @@ EM_analysis <- function(formula, design, K, lambda, weights = NULL,
     
     if (ncol(scale_W) == 1 & all(scale_W[,1] == 0)){
       warning('With no moderators, k-means replaced by random assignment; it is best to respecify to ensure short_EM is done as expected')
-      group_E.prob <- sample(1:K, nrow(W), replace = T)
+      group_E.prob <- sample(1:K, nrow(W), replace = TRUE)
       group_E.prob <- sparseMatrix(i = 1:nrow(W), j = group_E.prob, x = 1)
     }else{
       init_k <- suppressWarnings(kmeans(x = scale_W, centers = K, iter.max = 25, nstart = 1500)$group)
@@ -906,12 +906,12 @@ EM_analysis <- function(formula, design, K, lambda, weights = NULL,
     pi <- rexp(K)
     pi <- pi/sum(pi)
     
-    simK <- sample(1:K, n_G, prob = pi, replace = T)
+    simK <- sample(1:K, n_G, prob = pi, replace = TRUE)
     
     if (length(unique(simK)) != K){
       warning('Unbalanced Initialization for Random Pi: Doing with balanced 1/K')
       pi <- rep(1/K, K)
-      simK <- sample(1:K, n_G, prob = pi, replace = T)
+      simK <- sample(1:K, n_G, prob = pi, replace = TRUE)
     }
     group_E.prob <- as.matrix(sparseMatrix(i = 1:n_G, j = simK, x = 1, dims = c(n_G, K)))
     obs.E.prob <- apply(group_E.prob, MARGIN = 2, FUN=function(i){as.vector(group_mapping %*% i)})
@@ -924,7 +924,7 @@ EM_analysis <- function(formula, design, K, lambda, weights = NULL,
     })
     rownames(beta) <- NULL
   }else if (control$init_method == 'random_member'){
-    simK <- sample(1:K, n_G, replace = T)
+    simK <- sample(1:K, n_G, replace = TRUE)
     if (length(unique(simK)) != K){
       warning('Degenerat random allocation; initializing each probabilistically')
       group_E.prob <- t(sapply(1:n_G, FUN=function(i){i <- rexp(K); return(i/sum(i))}))
@@ -950,7 +950,7 @@ EM_analysis <- function(formula, design, K, lambda, weights = NULL,
     #Random initialization
     beta <- matrix(rnorm(ncol(X) * K), ncol = K)
     #Generate group membership probabilities randomly.
-    group_E.prob <- matrix(pi, ncol = K, nrow = n_G, byrow=T)
+    group_E.prob <- matrix(pi, ncol = K, nrow = n_G, byrow = TRUE)
   }else{stop('Invalid initialization method.')}
 
   # If no provided phi, use initializations to get estimate.
@@ -970,7 +970,7 @@ EM_analysis <- function(formula, design, K, lambda, weights = NULL,
     }
   }
   
-  toc(quiet = quiet_tictoc, log = T)
+  toc(quiet = quiet_tictoc, log = TRUE)
   
   #Set up placeholders for tracking progress of algorithm.
   old.beta <- beta
@@ -1135,7 +1135,7 @@ EM_analysis <- function(formula, design, K, lambda, weights = NULL,
                                 y=y,E.omega = E.omega, obs.E.prob = obs.E.prob, prior_beta = beta,
                                 weights = weights,
                                 E.ridge = E.ridge, K=K, global_int = single_intercept)
-            toc(quiet = quiet_tictoc, log = T)
+            toc(quiet = quiet_tictoc, log = TRUE)
           }else{
             beta <- update_beta(X=X,y=y,E.omega = E.omega, obs.E.prob = obs.E.prob, p_X = p_X, method = beta_method,
                                 prior_beta = beta, cg_it = beta_cg_it,
@@ -1295,7 +1295,7 @@ EM_analysis <- function(formula, design, K, lambda, weights = NULL,
               cg_flat_beta <- as.vector(beta)
               cg_flat_null <- matrix(as.vector(solve(crossprod(binding_null_basis), t(binding_null_basis) %*% cg_flat_beta)))
             }
-            toc(quiet = quiet_tictoc, log = T)
+            toc(quiet = quiet_tictoc, log = TRUE)
             
             tic('cg_est')
             
@@ -1308,7 +1308,7 @@ EM_analysis <- function(formula, design, K, lambda, weights = NULL,
 
             blocked_beta_null <- cg_b$beta
               
-            toc(quiet = quiet_tictoc, log = T)
+            toc(quiet = quiet_tictoc, log = TRUE)
 
           }else if (beta_method == 'cpp'){
             

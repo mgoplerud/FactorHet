@@ -6,7 +6,7 @@ prepare_formula <- function(fmla_main, fmla_moderator = NULL, weights = NULL,
   # Parse MAIN formula:
   #
   # Parse the formula, pretending "." is character
-  terms_fmla <- terms(fmla_main, allowDotAsName = T)
+  terms_fmla <- terms(fmla_main, allowDotAsName = TRUE)
   if (delete_response){
     terms_fmla <- delete.response(terms_fmla)    
   }
@@ -224,7 +224,7 @@ make_forced_choice <- function(y, X, group, task, weights, unique_choice, split_
   is_valid_split <- any(grepl(group, pattern=split_character)) | any(grepl(group, pattern=split_character))
   if (!is_valid_split){
     #Generate random split
-    split_character <- paste(c('@', sample(c(letters, LETTERS), 25, replace = T), '@'), collapse = '')
+    split_character <- paste(c('@', sample(c(letters, LETTERS), 25, replace = TRUE), '@'), collapse = '')
   }
   group_task_id <- paste0(group, split_character, task)
   

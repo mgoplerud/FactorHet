@@ -1222,7 +1222,7 @@ build_restrictions <- function(removed_cols, factor_names){
     names(restricted_levels) <- factor_names
     return(restricted_levels)
   }
-  restricted_levels <- strsplit(removed_cols, split='(?<=\\))-', perl = T)
+  restricted_levels <- strsplit(removed_cols, split='(?<=\\))-', perl = TRUE)
   restricted_levels <- lapply(restricted_levels, FUN=function(i){do.call('rbind', strsplit(i, split='\\(|\\)$'))})
 
   restricted_levels <- lapply(factor_names, FUN=function(j){

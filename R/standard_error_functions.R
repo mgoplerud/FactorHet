@@ -235,7 +235,7 @@ hessian_complete <- function(y, X_list, W, lambda, gamma, mu, beta_list, phi, ri
   if (K != 1){
     prec_prior_phi <- bdiag(lapply(seq_len(ncol(W)), FUN=function(i){ridge_phi * make_TMatrix(K)}))
     
-    order_w <- as.vector(matrix(seq_len(ncol(W) * (K-1)), byrow = T, nrow = K - 1))
+    order_w <- as.vector(matrix(seq_len(ncol(W) * (K-1)), byrow = TRUE, nrow = K - 1))
     Perm <- sparseMatrix(i=seq_len(ncol(W) * (K-1)), j =order_w, x = 1)
     
     prec_prior_phi <- t(Perm) %*% prec_prior_phi %*% Perm

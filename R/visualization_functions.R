@@ -614,7 +614,7 @@ margeff_moderators <- function(object, newdata = NULL, vcov = TRUE,
     # vis_mfx <- melt(all_mfx, id.vars = c('type', 'variable'),
     #   measure.vars = grep(names(all_mfx), pattern='^(t$|sig|changed|baseline)'),
     #   variable.name = 'mfx_type')
-    # vis_mfx$group <- gsub(vis_mfx$mfx_type, pattern='[^0-9]+', perl = T, replacement = 'Group ')
+    # vis_mfx$group <- gsub(vis_mfx$mfx_type, pattern='[^0-9]+', perl = TRUE, replacement = 'Group ')
     # vis_mfx$mfx_type <- gsub(vis_mfx$mfx_type, pattern='[\\.0-9]+', replacement ='')
     # vis_mfx <- dcast(vis_mfx, group + variable ~ mfx_type, value.var = 'value')
     vis_mfx <- do.call('rbind', lapply(grep(names(all_mfx), pattern='^(t$|sig|changed|baseline)'), FUN=function(i){
@@ -624,7 +624,7 @@ margeff_moderators <- function(object, newdata = NULL, vcov = TRUE,
                  value = all_mfx[,i],
                  stringsAsFactors = FALSE)
     }))
-    vis_mfx$group <- gsub(vis_mfx$mfx_type, pattern='[^0-9]+', perl = T, replacement = 'Group ')
+    vis_mfx$group <- gsub(vis_mfx$mfx_type, pattern='[^0-9]+', perl = TRUE, replacement = 'Group ')
     vis_mfx$mfx_type <- gsub(vis_mfx$mfx_type, pattern='[\\.0-9]+', replacement ='')
     joint_id <- paste(vis_mfx$group, '@@@@', vis_mfx$variable)
     int_vis <- split(vis_mfx[, c('value', 'mfx_type')], joint_id)

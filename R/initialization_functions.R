@@ -127,7 +127,7 @@ prepare_regression_data <- function(formula, design, moderator = NULL,
       tab_cols <- table(design[[combo_i[1]]], design[[combo_i[2]]])
       if (any(tab_cols == 0)){
         
-        ind_restrict <- which(tab_cols == 0, arr.ind = T)
+        ind_restrict <- which(tab_cols == 0, arr.ind = TRUE)
         ind_restrict <- cbind(rownames(tab_cols)[ind_restrict[,'row']],
               colnames(tab_cols)[ind_restrict[,'col']])
         ind_restrict <- paste(combo_i[1], '(', ind_restrict[,1], ')-', combo_i[2], '(', ind_restrict[,2] ,')', sep = '')
@@ -372,7 +372,7 @@ forest_init <- function(y, X, G, W, K){
     big_W <- as.matrix(G %*% W)
     easy_message('Starting Random Forests')
     run_cf <- sapply(1:ncol(X), FUN=function(i){
-      est_ranger <- ranger::ranger(factor(y) ~ ., data = data.frame(cbind(big_W, treat = X[,i])), probability = T)
+      est_ranger <- ranger::ranger(factor(y) ~ ., data = data.frame(cbind(big_W, treat = X[,i])), probability = TRUE)
       pred_1 <- predict(est_ranger, data = data.frame(cbind(W, treat = 1)))$prediction[,"1"]
       pred_0 <- predict(est_ranger, data = data.frame(cbind(W, treat = -1)))$prediction[,"1"]
       return(pred_1 - pred_0)
@@ -404,7 +404,7 @@ murphy_murphy_initialize <- function(y, X, W, K, group_mapping, weights,
     if (requireNamespace('mclust', quietly = TRUE)){
       if (ncol(W) == 1 & all(W[,1] == 1)){
         message('mclust initialization requires moderators. Using "random_member" instead.')
-        classif <- sample(1:K, nrow(W), replace = T)
+        classif <- sample(1:K, nrow(W), replace = TRUE)
       }else{
         classif <- mclust_init(W, K) %*% 1:K
       }
@@ -414,7 +414,7 @@ murphy_murphy_initialize <- function(y, X, W, K, group_mapping, weights,
   }else if (method == 'spectral'){
     if (ncol(W) == 1 & all(W[,1] == 1)){
       message('spectral initialization requires moderators. Using "random_member" instead.')
-      classif <- sample(1:K, nrow(W), replace = T)
+      classif <- sample(1:K, nrow(W), replace = TRUE)
     }else{
       classif <- spectral_init(W, K)
       classif <- rowSums(classif %*% Diagonal(x = 1:K))
