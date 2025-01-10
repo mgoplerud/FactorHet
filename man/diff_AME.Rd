@@ -21,6 +21,10 @@ function will show the difference in AMEs from this group, i.e. Group
 immediately or quietly provide an object containing the plot and data. The
 default is \code{TRUE}.}
 }
+\value{
+Returns a named list with the underlying data (\code{"data"}) and the
+  plot (\code{"plot"}).
+}
 \description{
 Computes the differences between AME between two groups with an
   accompanying standard error.

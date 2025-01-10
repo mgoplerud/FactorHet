@@ -235,7 +235,7 @@ make_forced_choice <- function(y, X, group, task, weights, unique_choice, split_
   }
   
   if (any(lengths(split_person_task) != 2)){
-    print(names(split_person_task)[which(lengths(split_person_task) != 2)])
+    easy_message(names(split_person_task)[which(lengths(split_person_task) != 2)])
     stop('Forced Choice Requires ALL group-tasks to have exactly two outcomes. "Bad" combinations listed above')
   }
   

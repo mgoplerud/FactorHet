@@ -16,36 +16,40 @@
 #'   methods work on models with using \code{\link{FactorHet}} and
 #'   \code{\link{FactorHet_mbo}}. 
 #'   \describe{
-#'   \item{plot: }{A shorthand for \code{\link{cjoint_plot}} on a fitted object.}
-#'   \item{formula: }{Get the underlying formula for the treatment effects and
-#'   moderators. This also returns the values used for \code{group},
+#'   \item{plot: }{This is a shorthand for \code{\link{cjoint_plot}} on a fitted
+#'   object.}
+#'   \item{formula: }{This returns the underlying formula for the treatment effects and
+#'   moderators as a named list. This also returns the values used for \code{group},
 #'   \code{task}, and \code{choice_order} if provided.}
-#'   \item{print: }{Two print methods. For \code{\link{FactorHet}}, it summarizes the
+#'   \item{print: }{This consists of two \code{print} methods.
+#'   For \code{\link{FactorHet}}, it summarizes the
 #'   model and fusion of the factor levels. \code{fusion.tolerance} sets the
 #'   threshold at which levels are reported as fused. For outputs of
 #'   \code{\link{AME}} (and similar), this plots the corresponding plot. See
 #'   that documentation for more details.}
-#'   \item{summary: }{Summarizes the main effects by group with standard errors.
-#'   It is typically more common to visualize this with \code{\link{cjoint_plot}} (and
-#'   the accompanying data.frame) or \code{\link{AME}}.
+#'   \item{summary: }{This summarizes the main effects by group with standard
+#'   errors. It is typically more common to visualize this with
+#'   \code{\link{cjoint_plot}} (and the accompanying data.frame) or \code{\link{AME}}.
 #'   \code{show_interactions = TRUE} shows the interactions in addition to the
 #'   main effects.}
-#'   \item{coef: }{Returns the coefficient matrix on the original scale (i.e. with
-#'   the sum-to-zero constraints). \code{code_type = "phi"} returns the
+#'   \item{coef: }{This returns the coefficient matrix on the original scale (i.e.
+#'   with the sum-to-zero constraints). \code{code_type = "phi"} returns the
 #'   moderator coefficients instead of the treatment effect coefficients.}
-#'   \item{AIC and BIC: }{Reports the AIC or BIC. If multiple degrees of freedom
-#'   options specified, returns a matrix. Otherwise, it returns a number.}
-#'   \item{logLik: }{Returns the log-likelihood, log-posterior or sequence of
-#'   log-posterior values at each iteration of the algorithm. See argument
-#'   \code{type} above for details.}
-#'   \item{visualize_MBO: }{For a model fit with \code{\link{FactorHet_mbo}}, show
-#'   information about the MBO, i.e. proposed values and objectives.}
-#'   \item{posterior_FactorHet: }{For a model with \code{K > 1}, visualize the
-#'   posterior for each observation and the posterior predictive implied by the
-#'   moderators.}
-#'   \item{vcov.FactorHet}{Extracts the estimated variance-covariance 
+#'   \item{AIC and BIC: }{This returns the AIC or BIC. If multiple degrees of
+#'   freedom options specified, it returns a matrix.}
+#'   \item{logLik: }{This returns the log-likelihood, log-posterior or sequence of
+#'   log-posterior values at each iteration of the algorithm. The argument
+#'   \code{"type"} provides more details.}
+#'   \item{visualize_MBO: }{For a model fit with \code{\link{FactorHet_mbo}}, 
+#'   this shows information about the MBO, i.e. proposed values and objectives.}
+#'   \item{posterior_FactorHet: }{For a model with \code{K > 1}, this visualizes 
+#'   the posterior for each observation and the posterior predictive implied by 
+#'   the moderators.}
+#'   \item{vcov.FactorHet}{This extracts the estimated variance-covariance 
 #'   matrix of the parameters.}
 #'  }
+#' @return Returns the corresponding output of the generic method. "Details"
+#'   provides details on the output of each function.
 #' @export
 plot.FactorHet <- function(x, y = NULL, ...){
   if (!is.null(y)){warning('y not used in plot.FactorHet')}
@@ -56,12 +60,13 @@ plot.FactorHet <- function(x, y = NULL, ...){
 #' @importFrom stats as.formula
 #' @export
 formula.FactorHet <- function(x, ...){
-  fmla <- lapply(x$internal_parameters$formula[c('het', 'mod')], as.formula, globalenv())
+  
+  fmla <- lapply(x$internal_parameters$formula[c('het', 'mod')], as.formula)
   
   if (x$internal_parameters$formula$weight == ""){
     fmla$weight <- NULL
   }else{
-    fmla$weight <- as.formula(x$internal_parameters$formula$weight, globalenv())
+    fmla$weight <- as.formula(x$internal_parameters$formula$weight)
   }
     
   fmla <- c(fmla, list('other_parameters' = x$internal_parameters$formula$other_parameters))

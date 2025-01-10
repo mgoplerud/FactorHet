@@ -15,9 +15,9 @@ FactorHet_init(
   short_EM_beta_method = "cpp",
   short_EM_cg_it = 10,
   nrep = 5,
-  debug_repeat = F,
-  plot_repeat = F,
-  return_all = F
+  debug_repeat = FALSE,
+  plot_repeat = FALSE,
+  return_all = FALSE
 )
 }
 \arguments{
@@ -66,6 +66,10 @@ log-posterior for each run. The default is \code{FALSE}.}
 \item{return_all}{A logical value for whether to return all repetitions of
 the model versus the one with the highest log-posterior. The default is
 \code{FALSE}.}
+}
+\value{
+\code{FactorHet_init} returns a named list containing the elements
+  listed in "Arguments".
 }
 \description{
 A set of arguments that govern the initialization of \code{\link{FactorHet}}.

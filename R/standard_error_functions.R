@@ -812,7 +812,7 @@ estimate.vcov <- function(object, tol_epsilon = 1e-4, type = 'louis', format_se 
   checksum_SE <- abs(max(c(as.vector(coef(object)), as.vector(t(coef(object, 'phi')[-1,]))) +
                            -as.vector(SE$estimates)))
   if (checksum_SE > 1e-4){
-    print(checksum_SE)
+    easy_message(checksum_SE)
     warning('Alignment error after re-projection')
   }
   #Format or not SE

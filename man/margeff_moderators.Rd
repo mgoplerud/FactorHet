@@ -44,6 +44,10 @@ marginal effects for each observation in \code{newdata} using those
 samples. This is considerably slower than the default setting. The appendix
 of Goplerud et al. (2025) illustrates one use of this argument.}
 }
+\value{
+Returns a named list with the underlying data (\code{"data"}) and the
+  plot (\code{"plot"}).
+}
 \description{
 This function computes the impact of changing a
   moderator on the group membership probabilities.

@@ -43,6 +43,11 @@ information. This is mostly called internally for other functions such as
 
 \item{...}{Miscellaneous options used internally and not documented.}
 }
+\value{
+Returns an estimate of the predicted probability of choosing a
+  profile for each observation. "Arguments" outlines different behavior if
+  certain options are chosen.
+}
 \description{
 Predicted values for choosing particular profiles based on
 \code{\link{FactorHet}}.

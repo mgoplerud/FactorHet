@@ -34,6 +34,10 @@ group membership probabilities, \eqn{\hat{\pi}(X_i)}. The default is
 fitting the refit model. The default is 200. A warning will be produced if
 it does not converge in this many iterations.}
 }
+\value{
+An object of class \code{\link{FactorHet}} that contains the output
+  described the linked documentation.
+}
 \description{
 Using a previously estimated model, this function takes the
   estimated sparsity patterns (e.g., which levels are fused together) and the

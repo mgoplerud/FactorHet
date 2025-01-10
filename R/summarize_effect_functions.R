@@ -167,17 +167,21 @@ HTE_by_individual <- function(object, AME, design = NULL){
 }
 
 #' @rdname HTE
-#' @param moderators List of moderators to evaluate; default (\code{NULL}) uses
-#'   all.
-#' @param points_continuous How many points to evaluate a continuous moderator
-#'   over.
-#' @param overall_AME Compute the AME over the entire \code{design} without
-#'   modification.
+#' @param moderators An argument that contains a list of moderators to evaluate.
+#'   The default is \code{NULL} and considers all moderators.
+#' @param points_continuous A positive integer value that indicates the number
+#'   of equally spaced points to evaluate a continuous moderator over.
+#' @param overall_AME A logical value that indicates whether to compute the AME
+#'   over the entire \code{design} without modification. The default is
+#'   \code{FALSE}.
+#' @param verbose A logical value that indicates whether progress should be
+#'   reported. The default is \code{FALSE}.
 #' @importFrom stats vcov
 #' @export
 HTE_by_moderator <- function(object, AME,
     moderators = NULL, design = NULL,
-    points_continuous = 10, overall_AME = FALSE){
+    points_continuous = 10, overall_AME = FALSE,
+    verbose = FALSE){
   
   K <- object$K
   if (inherits(object, 'FactorHet_refit')){
@@ -240,15 +244,17 @@ HTE_by_moderator <- function(object, AME,
     unique_mf <- c(unique_mf, list(`Overall AME` = NA))
   }
   store_moderator <- list()
+  if (verbose){
+    message('Looping over moderators')
+  }
   for (v in names(unique_mf)){
-    print(v)
+    if (verbose){message(v)}
     copy_design <- design
     # Loop over value of moderators
     u_mf <- unique_mf[[v]]
     counter_size <- length(u_mf)
     copy_all <- copy_all_prob <- copy_all_grad <- as.list(rep(NA, counter_size))
     for (counter in 1:counter_size){
-      print(counter)
       value <- u_mf[counter]
       if (is.na(value) & v == 'Overall AME'){
         copy_design <- design

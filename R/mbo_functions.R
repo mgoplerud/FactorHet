@@ -221,7 +221,8 @@ FactorHet_mbo <- function(formula, design, K, moderator = NULL, weights = NULL,
 #' 
 #' @examples 
 #' str(FactorHet_mbo_control())
-#' 
+#' @return \code{FactorHet_mbo_control} returns a named list containing the
+#'   elements listed in "Arguments".
 #' @export
 FactorHet_mbo_control <- function(
   mbo_type = c('sparse', 'ridge'),
@@ -353,7 +354,7 @@ internal_FH_mbo <- function(FH_args,
     if (verbose){message(paste0('Time for Propose 1: ', time_init[3]/60))}
     initial_sparse <- mean(abs(coef(initial_model)) < 1e-4)
     initial_IC <- initial_model$information_criterion
-    if (verbose){print(initial_IC)}
+    if (verbose){easy_message(initial_IC)}
     rm(initial_model); gc()
     initial_IC <- initial_IC[[criterion]][initial_IC$method == ic_method]
     if (initial_sparse > 0.90){
@@ -406,7 +407,7 @@ internal_FH_mbo <- function(FH_args,
     l_init <- c(initial_propose, second_propose, third_propose, NA)
     y_init <- c(initial_IC, second_IC, third_IC, NA)
     
-    if (verbose){print(cbind(y_init, l_init))}
+    if (verbose){easy_message(cbind(y_init, l_init))}
     
     if (third_sparse > 0.90){#if still sparse try YET AGAIN
       fourth_propose <- third_propose - 1
@@ -470,14 +471,14 @@ internal_FH_mbo <- function(FH_args,
     design2$y <- y_init
     if (verbose){
       message('Summary of Initial Design')
-      print(design2)
+      easy_message(design2)
     }
   }else if (design_type == 'smart'){
     design2 <- data.frame(l = l_init, y = y_init, 
         sparse = init_sparse, time = init_time)
     if (verbose){
       message('Summary of Initial Design')
-      print(design2)
+      easy_message(design2)
     }
   }else if (design_type == 'provided'){
     design2 <- mbo_design

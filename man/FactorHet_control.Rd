@@ -222,6 +222,10 @@ style-weights. The default is \code{FALSE}. If \code{TRUE} is provided,
 \code{sqrt(L) * (L + 1)} is used, where \code{L} is the number of factor
 levels.}
 }
+\value{
+\code{FactorHet_control} returns a named list containing the elements
+  listed in "Arguments".
+}
 \description{
 Provides a set of control arguments to \code{\link{FactorHet}}. Arguments
 around the initialization of the model (important when \code{K > 1}) can be

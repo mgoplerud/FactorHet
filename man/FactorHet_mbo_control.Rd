@@ -87,6 +87,10 @@ criterion should be used for MBO. The default is \code{NULL} which uses the
 \item{verbose}{A logical argument to provide more information on the initial
 steps for MBO; the default is \code{FALSE}.}
 }
+\value{
+\code{FactorHet_mbo_control} returns a named list containing the
+  elements listed in "Arguments".
+}
 \description{
 \code{FactorHet_mbo_control} is used to adjust the settings for the MBO
 (model-based optimization). All arguments have default values. This relies
@@ -177,7 +181,6 @@ used for evaluating all of the MBO proposals.
 }
 \examples{
 str(FactorHet_mbo_control())
-
 }
 \references{
 Bischl, Bernd, Jakob Richter, Jakob Bossek, Daniel Horn, Janek Thomas and

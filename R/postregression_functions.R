@@ -16,7 +16,7 @@ extract_coefficient <- function(object, vcov.type = NULL, baseline = NA, verbose
     use_baseline <- TRUE
     if (verbose){
       message('baseline = NULL gives the following baseline')
-      print(unlist(baseline))
+      easy_message(unlist(baseline))
     }
   }else{
     if (is.na(baseline[1])){
@@ -106,9 +106,8 @@ extract_coefficient <- function(object, vcov.type = NULL, baseline = NA, verbose
 #'   immediately or quietly provide an object containing the plot and data. The
 #'   default is \code{TRUE}.
 #' @seealso \link{AME}
-#' @return \item{plot}{The ggplot2 visualization of the coefficients.}
-#' \item{data}{The data used to create the ggplot2 visualization.}
-#' 
+#' @return Returns a named list with the underlying data (\code{"data"}) and the
+#'   plot (\code{"plot"}).
 #' @examples 
 #' # Fit with one group and limited regularization for example only
 #' # Ignore conjoint structure for simplicity
@@ -446,7 +445,11 @@ manual_AME <- function(object, baseline, vcov = TRUE,
 #' \code{AME}, for clarity. Please adjust your code to use the current names.
 #' 
 #' @rdname deprecated
+#' @return Returns objects corresponding to those described in
+#'   \code{\link{AME}}, \code{\link{ACE}}, \code{\link{AMIE}}, and
+#'   \code{\link{margeff_moderators}}, respectively.
 #' @keywords internal
+#' @seealso \link{AME} \link{margeff_moderators}
 #' @export
 marginal_AME <- function(...){
   .Deprecated(new = 'AME', old = 'marginal_AME')
@@ -482,7 +485,7 @@ internal_AME <- function(object, baseline = NULL, vcov = TRUE,
     baseline <- lapply(object_factor_levels, FUN=function(i){i[1]})
     if (verbose){
       message('baseline = NULL gives the following baseline')
-      print(unlist(baseline))
+      easy_message(unlist(baseline))
     }
   } else if (identical(baseline, NA)) {
     baseline <- lapply(object_factor_levels, FUN=function(i){NA})
@@ -784,7 +787,8 @@ internal_AME <- function(object, baseline = NULL, vcov = TRUE,
 #' @param plot A logical value as to whether the function should print the plot
 #'   immediately or quietly provide an object containing the plot and data. The
 #'   default is \code{TRUE}.
-#' 
+#' @return Returns a named list with the underlying data (\code{"data"}) and the
+#'   plot (\code{"plot"}).
 #' @examples
 #'   # Fit with two groups and fixed lambda for quick illustration
 #'   \donttest{
@@ -1113,7 +1117,7 @@ AMIE <- function(object, design = NULL, baseline = NULL, average_position = TRUE
     baseline <- lapply(object_factor_levels, FUN=function(i){i[1]})
     if (verbose){
       message('baseline = NULL gives the following baseline')
-      print(unlist(baseline))
+      easy_message(unlist(baseline))
     }
   }else{
     if (length(baseline) < 2){
@@ -1139,7 +1143,7 @@ AMIE <- function(object, design = NULL, baseline = NULL, average_position = TRUE
   all_AMIE <- lapply(1:ncol(baseline_combinations), FUN=function(i){
     # Get two factors
     combo_i <- baseline_combinations[,i]
-    if (verbose){print(combo_i)}
+    if (verbose){easy_message(combo_i)}
     extra_res <- c()
     for (v in restriction_list[combo_i]){
       extra_res <- c(extra_res, v)

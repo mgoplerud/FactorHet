@@ -19,8 +19,8 @@ immediately or quietly provide an object containing the plot and data. The
 default is \code{TRUE}.}
 }
 \value{
-\item{plot}{The ggplot2 visualization of the coefficients.}
-\item{data}{The data used to create the ggplot2 visualization.}
+Returns a named list with the underlying data (\code{"data"}) and the
+  plot (\code{"plot"}).
 }
 \description{
 Plots the coefficients \eqn{\beta_k} from a fitted FactorHet object for the

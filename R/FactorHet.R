@@ -252,7 +252,7 @@ FactorHet <- function(formula, design, K, lambda,
   
   if (short_EM){
     if (initialize$debug_repeat){
-      print(cbind(ll.final, 
+      easy_message(cbind(ll.final, 
                   sapply(mlist, FUN=function(i){i$parameters$pi[1]}), 
                   sapply(mlist, FUN=function(i){max(abs(coef(i)))})))
     }
@@ -276,7 +276,7 @@ FactorHet <- function(formula, design, K, lambda,
     return(mlist)
   }else{
     if (initialize$debug_repeat){
-      print(cbind(ll.final, sapply(mlist, FUN=function(i){i$parameters$pi[1]}), 
+      easy_message(cbind(ll.final, sapply(mlist, FUN=function(i){i$parameters$pi[1]}), 
                   sapply(mlist, FUN=function(i){max(abs(coef(i)))})))
     }
     if (initialize$return_all){

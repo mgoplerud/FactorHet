@@ -4,7 +4,7 @@
 \alias{rank_via_null}
 \title{Rank of Matrix}
 \usage{
-rank_via_null(X, outer = F)
+rank_via_null(X, outer = FALSE)
 }
 \arguments{
 \item{X}{Sparse Matrix with size N by p.}

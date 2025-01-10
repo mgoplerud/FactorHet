@@ -221,6 +221,8 @@ refit_model_FH <- function(object, tolerance, data, hard_assign,
 #' HTE_refit <- HTE_by_individual(refit, AME_refit, design = immigration)
 #' }
 #' @importFrom stats vcov
+#' @return An object of class \code{\link{FactorHet}} that contains the output
+#'   described the linked documentation.
 #' @export
 FactorHet_refit <- function(object, newdata, tolerance = 1e-3, 
     hard_assign = FALSE, iter_refit = 200){

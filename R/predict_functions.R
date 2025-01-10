@@ -40,6 +40,9 @@
 #' immigration$pred_FH <- predict(fit)  
 #' @importFrom stats predict coef formula plogis delete.response update.formula
 #'   na.omit qlogis
+#' @return Returns an estimate of the predicted probability of choosing a
+#'   profile for each observation. "Arguments" outlines different behavior if
+#'   certain options are chosen.
 #' @export 
 predict.FactorHet <- function(object, newdata = NULL, type = 'posterior', 
                               by_group = FALSE, 
@@ -169,7 +172,7 @@ predict.FactorHet <- function(object, newdata = NULL, type = 'posterior',
       formula_object$mod <- ~ 1
     }
     if (isTRUE(options$ignore_moderator)){
-      browser()
+      stop('Set up option')
     }
     new_concom <- suppressMessages(create_moderator(design = prep_newdata$design, 
         args = object$internal_parameters$W$args, check_rank = FALSE,
@@ -183,12 +186,12 @@ predict.FactorHet <- function(object, newdata = NULL, type = 'posterior',
     checksum_names <- object$internal_parameters$W$args$names
     if (length(checksum_names) == 0){checksum_names <- NULL}
     if (!identical(colnames(new_W), checksum_names)){
-      print('Non Identical Names in OOS W and W')
-      print('OOS NAMES')
-      print(colnames(new_W))
-      print('MODEL NAMES')
-      print(object$internal_parameters$W$args$names[-1])
-      stop()
+      easy_message('Non Identical Names in OOS W and W')
+      easy_message('OOS NAMES')
+      easy_message(colnames(new_W))
+      easy_message('MODEL NAMES')
+      easy_message(object$internal_parameters$W$args$names[-1])
+      stop('error: inspect prior messages')
     }
     
   }else{

@@ -373,6 +373,8 @@ group_table_fun<-function(data_obj, clus_var_nam1, clus_var_nam2){
 #'   control = FactorHet_control(init = 'mclust'),
 #'   task = ~ contest_no, choice_order = ~ choice_id)
 #' margeff_moderators(fit)
+#' @return Returns a named list with the underlying data (\code{"data"}) and the
+#'   plot (\code{"plot"}).
 #' @import ggplot2
 #' @export
 margeff_moderators <- function(object, newdata = NULL, vcov = TRUE,

@@ -14,7 +14,8 @@ HTE_by_moderator(
   moderators = NULL,
   design = NULL,
   points_continuous = 10,
-  overall_AME = FALSE
+  overall_AME = FALSE,
+  verbose = FALSE
 )
 }
 \arguments{
@@ -29,14 +30,18 @@ the individual-level or average conditional average marginal effects.
 \bold{Note:} There should be one row per observation if this function is
 used. The default is \code{NULL} which uses the estimation data.}
 
-\item{moderators}{List of moderators to evaluate; default (\code{NULL}) uses
-all.}
+\item{moderators}{An argument that contains a list of moderators to evaluate.
+The default is \code{NULL} and considers all moderators.}
 
-\item{points_continuous}{How many points to evaluate a continuous moderator
-over.}
+\item{points_continuous}{A positive integer value that indicates the number
+of equally spaced points to evaluate a continuous moderator over.}
 
-\item{overall_AME}{Compute the AME over the entire \code{design} without
-modification.}
+\item{overall_AME}{A logical value that indicates whether to compute the AME
+over the entire \code{design} without modification. The default is
+\code{FALSE}.}
+
+\item{verbose}{A logical value that indicates whether progress should be
+reported. The default is \code{FALSE}.}
 }
 \value{
 \code{HTE_by_individual} returns a list with two data.frames. The

@@ -370,19 +370,17 @@ forest_init <- function(y, X, G, W, K){
   use_ranger <- requireNamespace('ranger', quietly = TRUE)
   if (use_ranger){
     big_W <- as.matrix(G %*% W)
-    cat('Starting Random Forests\n')
+    easy_message('Starting Random Forests')
     run_cf <- sapply(1:ncol(X), FUN=function(i){
-      cat('|')
       est_ranger <- ranger::ranger(factor(y) ~ ., data = data.frame(cbind(big_W, treat = X[,i])), probability = T)
       pred_1 <- predict(est_ranger, data = data.frame(cbind(W, treat = 1)))$prediction[,"1"]
       pred_0 <- predict(est_ranger, data = data.frame(cbind(W, treat = -1)))$prediction[,"1"]
       return(pred_1 - pred_0)
     })
-    cat('\n')
     colnames(run_cf) <- colnames(X)
-    cat('Performing K-Means on Univariate Heterogeneous Effects\n')
+    message('Performing K-Means on Univariate Heterogeneous Effects')
     fit_km <- kmeans(x = run_cf, centers = K, iter.max = 150, nstart = 2000)
-    cat('Completed Forest Initialization\n')
+    message('Completed Forest Initialization')
     assign <- as.matrix(sparseMatrix(i = 1:nrow(W), j = fit_km$cluster, x = 1))
     return(assign)
     # return(list(assign = assign, km = fit_km, causal = run_cf))

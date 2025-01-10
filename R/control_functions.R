@@ -180,6 +180,8 @@
 #' Yan, Xiaohan and Jacob Bien. 2017. "Hierarchical Sparse Modeling: A Choice of
 #' Two Group Lasso Formulations." \emph{Statistical Science} 32(4):531–560.
 #' 
+#' @return \code{FactorHet_control} returns a named list containing the elements
+#'   listed in "Arguments".
 #' @export
 FactorHet_control <- function(
   iterations = 1000, 
@@ -281,6 +283,8 @@ FactorHet_control <- function(
 #' @examples 
 #' str(FactorHet_init())
 #' 
+#' @return \code{FactorHet_init} returns a named list containing the elements
+#'   listed in "Arguments".
 #' @encoding UTF-8
 #' @references 
 #' Biernacki, Christophe, Gilles Celeux, and Gérard Govaert. "Choosing Starting
@@ -293,7 +297,8 @@ FactorHet_init <- function(short_EM = FALSE, short_EM_it = 40,
                            force_rep = FALSE, verbose = FALSE, 
                            short_EM_beta_method = 'cpp', 
                            short_EM_cg_it = 10, nrep = 5, 
-                           debug_repeat = F, plot_repeat = F, return_all = F){
+                           debug_repeat = FALSE, 
+                           plot_repeat = FALSE, return_all = FALSE){
   output <- mget(ls())
   class(output) <- 'FactorHet_init'
   return(output)

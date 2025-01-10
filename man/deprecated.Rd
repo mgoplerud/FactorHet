@@ -16,8 +16,16 @@ marginal_AMIE(...)
 
 moderator_AME(...)
 }
+\value{
+Returns objects corresponding to those described in
+  \code{\link{AME}}, \code{\link{ACE}}, \code{\link{AMIE}}, and
+  \code{\link{margeff_moderators}}, respectively.
+}
 \description{
 The names of these functions have changed, e.g., \code{AME} to
 \code{AME}, for clarity. Please adjust your code to use the current names.
+}
+\seealso{
+\link{AME} \link{margeff_moderators}
 }
 \keyword{internal}
