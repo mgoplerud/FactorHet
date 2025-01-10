@@ -323,7 +323,7 @@ EM_analysis <- function(formula, design, K, lambda, weights = NULL,
   weights_W <- as.vector(weights_W)
   weights <- as.vector(weights)
   
-  # print(head(weights_W))
+  # easy_message(head(weights_W))
   if (abs(sum(weights_W) - nrow(W)) > sqrt(.Machine$double.eps)){
     warning('Weird Standardization Issue')
   }
@@ -397,7 +397,7 @@ EM_analysis <- function(formula, design, K, lambda, weights = NULL,
     rank_F <- rank_via_null(rank_F)
     
     if (rank_F != (ncol(X) - 1)){
-      print(c(ncol(X), rank_F))
+      easy_message(c(ncol(X), rank_F))
       warning('Rank F is unusual?')
       stop()
     }
@@ -712,7 +712,7 @@ EM_analysis <- function(formula, design, K, lambda, weights = NULL,
       r_aw <- rownames(adaptive_weight)
       names(r_aw) <- NULL
       if (!identical(r_aw, coef_names)){
-        print(coef_names)
+        easy_message(coef_names)
         stop('Row names on adaptive_weight must match coef_names')
       }
 
@@ -1326,7 +1326,7 @@ EM_analysis <- function(formula, design, K, lambda, weights = NULL,
             # if (max(abs(blocked_E - blocked_E_old)) > 1e-4){
             #   ttt <- (max(abs(blocked_E - blocked_E_old)))
             #   if (ttt > 0){
-            #     print('Diff')
+            #     easy_message('Diff')
             #     warning(round(ttt, 5))
             #   }
             # }
@@ -1560,7 +1560,7 @@ EM_analysis <- function(formula, design, K, lambda, weights = NULL,
     
     max.all <- max(c(change.beta, change.phi))
     # plot(na.omit(store_ll)[,1], type = 'l')
-    # print(log10(c(max.all, change_logposterior)))
+    # easy_message(log10(c(max.all, change_logposterior)))
     if (max.all < tolerance.parameters | (change_logposterior > 0 & (change_logposterior < tolerance.logposterior))){
       if (it > control$tau_stabilization){
         message('Converged')
@@ -1630,7 +1630,7 @@ EM_analysis <- function(formula, design, K, lambda, weights = NULL,
     }else{
       if (tau_method == 'clip' | is.null(binding_null_basis) | TRUE){
         
-        # if (force_reset){print('Forcing')}
+        # if (force_reset){easy_message('Forcing')}
         # binding_lookup <- build_binding_lookup(Fmatrix = Fmatrix, factor_levels = factor_levels, term_position = term_position, coef_names = coef_names)
         existing_restrictions <- lapply(1:K, FUN=function(i){
           i <- lapply(1:length(Fmatrix), FUN=function(j){c()})
@@ -2047,11 +2047,11 @@ clip_Etau <- function(E.tau, threshold){
 compare_ll <- function(new_ll, running_ll, stage, debug_ll, tol = 1e-8){
   if (running_ll[1] > new_ll[1] + tol){
     if (debug_ll){
-      print('New')
-      print(new_ll)
-      print('Running')
-      print(running_ll)
-      print(new_ll - running_ll)
+      easy_message('New')
+      easy_message(new_ll)
+      easy_message('Running')
+      easy_message(running_ll)
+      easy_message(new_ll - running_ll)
       stop(paste0(stage, ': Decrease in observed loglik'))
     }
   }
@@ -2218,7 +2218,7 @@ update_beta_global_int <- function(blocked_X, y, E.omega, obs.E.prob, weights, E
     #   omega = as.vector(E.omega),
     #   ridge = blocked_E, tol = sqrt(.Machine$double.eps),
     #   it_max = cg_it, old_beta = flat_beta)
-    # print(cg_b$iter)
+    # easy_message(cg_b$iter)
     mu <- cg_b$beta[1]
     
     beta <- matrix(cg_b$beta[-1], ncol = K)
