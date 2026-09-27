@@ -12,13 +12,13 @@ Rcpp::Rostream<false>& Rcpp::Rcerr = Rcpp::Rcpp_cerr_get();
 #endif
 
 // cpp_beta
-Eigen::MatrixXd cpp_beta(const int K, const Eigen::MappedSparseMatrix<double> X, const Rcpp::List E_ridge, const Eigen::Map<Eigen::ArrayXd> y, const Eigen::Map<Eigen::ArrayXd> weights, const Eigen::Map<Eigen::MatrixXd> E_omega, const Eigen::Map<Eigen::MatrixXd> obs_E_prob);
+Eigen::MatrixXd cpp_beta(const int K, const Eigen::Map<Eigen::SparseMatrix<double>> X, const Rcpp::List E_ridge, const Eigen::Map<Eigen::ArrayXd> y, const Eigen::Map<Eigen::ArrayXd> weights, const Eigen::Map<Eigen::MatrixXd> E_omega, const Eigen::Map<Eigen::MatrixXd> obs_E_prob);
 RcppExport SEXP _FactorHet_cpp_beta(SEXP KSEXP, SEXP XSEXP, SEXP E_ridgeSEXP, SEXP ySEXP, SEXP weightsSEXP, SEXP E_omegaSEXP, SEXP obs_E_probSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
     Rcpp::traits::input_parameter< const int >::type K(KSEXP);
-    Rcpp::traits::input_parameter< const Eigen::MappedSparseMatrix<double> >::type X(XSEXP);
+    Rcpp::traits::input_parameter< const Eigen::Map<Eigen::SparseMatrix<double>> >::type X(XSEXP);
     Rcpp::traits::input_parameter< const Rcpp::List >::type E_ridge(E_ridgeSEXP);
     Rcpp::traits::input_parameter< const Eigen::Map<Eigen::ArrayXd> >::type y(ySEXP);
     Rcpp::traits::input_parameter< const Eigen::Map<Eigen::ArrayXd> >::type weights(weightsSEXP);
@@ -29,28 +29,28 @@ BEGIN_RCPP
 END_RCPP
 }
 // cpp_beta_plain
-Eigen::MatrixXd cpp_beta_plain(const int K, const Eigen::MappedSparseMatrix<double> X, const Eigen::MappedSparseMatrix<double> omega, const Eigen::MappedSparseMatrix<double> ridge, const Eigen::Map<Eigen::VectorXd> s);
+Eigen::MatrixXd cpp_beta_plain(const int K, const Eigen::Map<Eigen::SparseMatrix<double>> X, const Eigen::Map<Eigen::SparseMatrix<double>> omega, const Eigen::Map<Eigen::SparseMatrix<double>> ridge, const Eigen::Map<Eigen::VectorXd> s);
 RcppExport SEXP _FactorHet_cpp_beta_plain(SEXP KSEXP, SEXP XSEXP, SEXP omegaSEXP, SEXP ridgeSEXP, SEXP sSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
     Rcpp::traits::input_parameter< const int >::type K(KSEXP);
-    Rcpp::traits::input_parameter< const Eigen::MappedSparseMatrix<double> >::type X(XSEXP);
-    Rcpp::traits::input_parameter< const Eigen::MappedSparseMatrix<double> >::type omega(omegaSEXP);
-    Rcpp::traits::input_parameter< const Eigen::MappedSparseMatrix<double> >::type ridge(ridgeSEXP);
+    Rcpp::traits::input_parameter< const Eigen::Map<Eigen::SparseMatrix<double>> >::type X(XSEXP);
+    Rcpp::traits::input_parameter< const Eigen::Map<Eigen::SparseMatrix<double>> >::type omega(omegaSEXP);
+    Rcpp::traits::input_parameter< const Eigen::Map<Eigen::SparseMatrix<double>> >::type ridge(ridgeSEXP);
     Rcpp::traits::input_parameter< const Eigen::Map<Eigen::VectorXd> >::type s(sSEXP);
     rcpp_result_gen = Rcpp::wrap(cpp_beta_plain(K, X, omega, ridge, s));
     return rcpp_result_gen;
 END_RCPP
 }
 // cg_custom
-List cg_custom(const int K, const Eigen::MappedSparseMatrix<double> X, const Eigen::Map<Eigen::MatrixXd> omega, const List list_ridge, const Eigen::Map<Eigen::VectorXd> s, const Eigen::Map<Eigen::MatrixXd> old_beta, const Eigen::Map<Eigen::MatrixXd> weights, const double tol, const int it_max, const int low_dimension);
+List cg_custom(const int K, const Eigen::Map<Eigen::SparseMatrix<double>> X, const Eigen::Map<Eigen::MatrixXd> omega, const List list_ridge, const Eigen::Map<Eigen::VectorXd> s, const Eigen::Map<Eigen::MatrixXd> old_beta, const Eigen::Map<Eigen::MatrixXd> weights, const double tol, const int it_max, const int low_dimension);
 RcppExport SEXP _FactorHet_cg_custom(SEXP KSEXP, SEXP XSEXP, SEXP omegaSEXP, SEXP list_ridgeSEXP, SEXP sSEXP, SEXP old_betaSEXP, SEXP weightsSEXP, SEXP tolSEXP, SEXP it_maxSEXP, SEXP low_dimensionSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
     Rcpp::traits::input_parameter< const int >::type K(KSEXP);
-    Rcpp::traits::input_parameter< const Eigen::MappedSparseMatrix<double> >::type X(XSEXP);
+    Rcpp::traits::input_parameter< const Eigen::Map<Eigen::SparseMatrix<double>> >::type X(XSEXP);
     Rcpp::traits::input_parameter< const Eigen::Map<Eigen::MatrixXd> >::type omega(omegaSEXP);
     Rcpp::traits::input_parameter< const List >::type list_ridge(list_ridgeSEXP);
     Rcpp::traits::input_parameter< const Eigen::Map<Eigen::VectorXd> >::type s(sSEXP);
@@ -64,50 +64,50 @@ BEGIN_RCPP
 END_RCPP
 }
 // trace_df_cpp
-double trace_df_cpp(const Eigen::MappedSparseMatrix<double> X, const Eigen::Map<Eigen::MatrixXd> beta, const Eigen::MappedSparseMatrix<double> ridge);
+double trace_df_cpp(const Eigen::Map<Eigen::SparseMatrix<double>> X, const Eigen::Map<Eigen::MatrixXd> beta, const Eigen::Map<Eigen::SparseMatrix<double>> ridge);
 RcppExport SEXP _FactorHet_trace_df_cpp(SEXP XSEXP, SEXP betaSEXP, SEXP ridgeSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< const Eigen::MappedSparseMatrix<double> >::type X(XSEXP);
+    Rcpp::traits::input_parameter< const Eigen::Map<Eigen::SparseMatrix<double>> >::type X(XSEXP);
     Rcpp::traits::input_parameter< const Eigen::Map<Eigen::MatrixXd> >::type beta(betaSEXP);
-    Rcpp::traits::input_parameter< const Eigen::MappedSparseMatrix<double> >::type ridge(ridgeSEXP);
+    Rcpp::traits::input_parameter< const Eigen::Map<Eigen::SparseMatrix<double>> >::type ridge(ridgeSEXP);
     rcpp_result_gen = Rcpp::wrap(trace_df_cpp(X, beta, ridge));
     return rcpp_result_gen;
 END_RCPP
 }
 // trace_AinvB_sparse
-double trace_AinvB_sparse(const Eigen::MappedSparseMatrix<double> A, const Eigen::MappedSparseMatrix<double> B);
+double trace_AinvB_sparse(const Eigen::Map<Eigen::SparseMatrix<double>> A, const Eigen::Map<Eigen::SparseMatrix<double>> B);
 RcppExport SEXP _FactorHet_trace_AinvB_sparse(SEXP ASEXP, SEXP BSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< const Eigen::MappedSparseMatrix<double> >::type A(ASEXP);
-    Rcpp::traits::input_parameter< const Eigen::MappedSparseMatrix<double> >::type B(BSEXP);
+    Rcpp::traits::input_parameter< const Eigen::Map<Eigen::SparseMatrix<double>> >::type A(ASEXP);
+    Rcpp::traits::input_parameter< const Eigen::Map<Eigen::SparseMatrix<double>> >::type B(BSEXP);
     rcpp_result_gen = Rcpp::wrap(trace_AinvB_sparse(A, B));
     return rcpp_result_gen;
 END_RCPP
 }
 // trace_AinvB
-double trace_AinvB(const Eigen::MappedSparseMatrix<double> A, const Eigen::Map<Eigen::MatrixXd> B);
+double trace_AinvB(const Eigen::Map<Eigen::SparseMatrix<double>> A, const Eigen::Map<Eigen::MatrixXd> B);
 RcppExport SEXP _FactorHet_trace_AinvB(SEXP ASEXP, SEXP BSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< const Eigen::MappedSparseMatrix<double> >::type A(ASEXP);
+    Rcpp::traits::input_parameter< const Eigen::Map<Eigen::SparseMatrix<double>> >::type A(ASEXP);
     Rcpp::traits::input_parameter< const Eigen::Map<Eigen::MatrixXd> >::type B(BSEXP);
     rcpp_result_gen = Rcpp::wrap(trace_AinvB(A, B));
     return rcpp_result_gen;
 END_RCPP
 }
 // fast_sparse_df
-double fast_sparse_df(const Eigen::MappedSparseMatrix<double> LL, const Eigen::MappedSparseMatrix<double> PR);
+double fast_sparse_df(const Eigen::Map<Eigen::SparseMatrix<double>> LL, const Eigen::Map<Eigen::SparseMatrix<double>> PR);
 RcppExport SEXP _FactorHet_fast_sparse_df(SEXP LLSEXP, SEXP PRSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< const Eigen::MappedSparseMatrix<double> >::type LL(LLSEXP);
-    Rcpp::traits::input_parameter< const Eigen::MappedSparseMatrix<double> >::type PR(PRSEXP);
+    Rcpp::traits::input_parameter< const Eigen::Map<Eigen::SparseMatrix<double>> >::type LL(LLSEXP);
+    Rcpp::traits::input_parameter< const Eigen::Map<Eigen::SparseMatrix<double>> >::type PR(PRSEXP);
     rcpp_result_gen = Rcpp::wrap(fast_sparse_df(LL, PR));
     return rcpp_result_gen;
 END_RCPP
@@ -173,23 +173,23 @@ BEGIN_RCPP
 END_RCPP
 }
 // calculate_nullspace_basis
-Eigen::SparseMatrix<double> calculate_nullspace_basis(const Eigen::MappedSparseMatrix<double> X);
+Eigen::SparseMatrix<double> calculate_nullspace_basis(const Eigen::Map<Eigen::SparseMatrix<double>> X);
 RcppExport SEXP _FactorHet_calculate_nullspace_basis(SEXP XSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< const Eigen::MappedSparseMatrix<double> >::type X(XSEXP);
+    Rcpp::traits::input_parameter< const Eigen::Map<Eigen::SparseMatrix<double>> >::type X(XSEXP);
     rcpp_result_gen = Rcpp::wrap(calculate_nullspace_basis(X));
     return rcpp_result_gen;
 END_RCPP
 }
 // rank_sparse
-int rank_sparse(const Eigen::MappedSparseMatrix<double> X);
+int rank_sparse(const Eigen::Map<Eigen::SparseMatrix<double>> X);
 RcppExport SEXP _FactorHet_rank_sparse(SEXP XSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< const Eigen::MappedSparseMatrix<double> >::type X(XSEXP);
+    Rcpp::traits::input_parameter< const Eigen::Map<Eigen::SparseMatrix<double>> >::type X(XSEXP);
     rcpp_result_gen = Rcpp::wrap(rank_sparse(X));
     return rcpp_result_gen;
 END_RCPP

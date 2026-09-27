@@ -9,7 +9,7 @@ using namespace Rcpp;
 // [[Rcpp::export]]
 Eigen::MatrixXd cpp_beta(
     const int K,
-    const Eigen::MappedSparseMatrix<double> X,
+    const Eigen::Map<Eigen::SparseMatrix<double>> X,
     const Rcpp::List E_ridge,
     const Eigen::Map<Eigen::ArrayXd> y,
     const Eigen::Map<Eigen::ArrayXd> weights,
@@ -43,9 +43,9 @@ Eigen::MatrixXd cpp_beta(
 // [[Rcpp::export]]
 Eigen::MatrixXd cpp_beta_plain(
     const int K,
-    const Eigen::MappedSparseMatrix<double> X,
-    const Eigen::MappedSparseMatrix<double> omega,
-    const Eigen::MappedSparseMatrix<double> ridge,
+    const Eigen::Map<Eigen::SparseMatrix<double>> X,
+    const Eigen::Map<Eigen::SparseMatrix<double>> omega,
+    const Eigen::Map<Eigen::SparseMatrix<double>> ridge,
     const Eigen::Map<Eigen::VectorXd> s
 ){
   Eigen::SparseMatrix<double> adj_X = X.adjoint();
@@ -58,7 +58,7 @@ Eigen::MatrixXd cpp_beta_plain(
 // [[Rcpp::export]]
 List cg_custom(
     const int K,
-    const Eigen::MappedSparseMatrix<double> X,
+    const Eigen::Map<Eigen::SparseMatrix<double>> X,
     const Eigen::Map<Eigen::MatrixXd> omega,
     const List list_ridge,
     const Eigen::Map<Eigen::VectorXd> s,
