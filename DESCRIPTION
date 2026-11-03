@@ -12,7 +12,7 @@ Description: Estimates heterogeneous effects in factorial (and conjoint)
     observation's probability of group membership and a sparsity-inducing
     prior fuses together levels of each factor while respecting
     ANOVA-style sum-to-zero constraints. Goplerud, Imai, and Pashley
-    (2025) <doi.org/10.1214/24-AOAS1994> provide further details.
+    (2025) <doi:10.1214/24-AOAS1994> provide further details.
 Depends: R (>= 3.4.0)
 License: GPL (>= 2)
 Encoding: UTF-8

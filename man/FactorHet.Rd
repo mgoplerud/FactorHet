@@ -187,3 +187,8 @@ posterior_FactorHet(fit_MBO)
 AME(fit_MBO)
 }
 }
+\references{
+Goplerud, Max, Kosuke Imai, and Nicole E. Pashley. 2025. "Estimating
+Heterogeneous Causal Effects of High-Dimensional Treatments: Application to
+Conjoint Analysis." \emph{Annals of Applied Statistics} 19(2): 866-888.
+}

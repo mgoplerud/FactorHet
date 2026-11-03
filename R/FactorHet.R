@@ -136,6 +136,12 @@
 #'   provides a quick graphical summary of the BIC at different \eqn{\lambda}.}
 #'   }
 #' @importFrom graphics plot lines
+#' @references 
+#' 
+#' Goplerud, Max, Kosuke Imai, and Nicole E. Pashley. 2025. "Estimating
+#' Heterogeneous Causal Effects of High-Dimensional Treatments: Application to
+#' Conjoint Analysis." \emph{Annals of Applied Statistics} 19(2): 866-888.
+#' 
 #' @export
 FactorHet <- function(formula, design, K, lambda, 
   moderator = NULL, group = NULL, task = NULL, choice_order = NULL, 
