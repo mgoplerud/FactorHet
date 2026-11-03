@@ -1,6 +1,6 @@
 ## Resubmission
 
-This is an update on FactorHet 1.0.0 that addesses an upcoming change to RcppEigen.
+This is an update on FactorHet 1.0.0 that addresses an upcoming change to RcppEigen.
 
 ## R CMD check results
 

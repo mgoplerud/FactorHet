@@ -126,5 +126,5 @@ Louis, Thomas A. 1982. "Finding the Observed Information Matrix when Using
   
   Goplerud, Max, Kosuke Imai, and Nicole E. Pashley. 2025. "Estimating
   Heterogeneous Causal Effects of High-Dimensional Treatments: Application to
-  Conjoint Analysis." arxiv preprint: \url{https://arxiv.org/abs/2201.01357}
+  Conjoint Analysis." \emph{Annals of Applied Statistics} 19(2): 866-888. \doi{10.1214/24-AOAS1994}
 }

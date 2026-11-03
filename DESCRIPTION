@@ -1,7 +1,7 @@
 Package: FactorHet
 Title: Estimate Heterogeneous Effects in Factorial Experiments Using Grouping and Sparsity
 Version: 1.0.1
-Date: 2026-11-3
+Date: 2026-11-03
 Authors@R: c(
   person("Max", "Goplerud", role = c("aut", "cre"), email = "mgoplerud@austin.utexas.edu"),
   person(given=c("Nicole", "E."), "Pashley", role = c("aut"), email = "nicole.pashley@rutgers.edu"),

@@ -1,6 +1,6 @@
 # FactorHet [![R-CMD-check](https://github.com/mgoplerud/FactorHet/workflows/R-CMD-check/badge.svg)](https://github.com/mgoplerud/FactorHet/actions) [![codecov](https://codecov.io/gh/mgoplerud/FactorHet/branch/master/graph/badge.svg?token=R0RDGBF1OX)](https://app.codecov.io/gh/mgoplerud/FactorHet)
 
-This package estimates heterogeneous effects in factorial and conjoint experiments. Its details are fully described in [Goplerud, Imai, and Pashley (2025)](https://arxiv.org/abs/2201.01357): "Estimating Heterogeneous Causal Effects of High-Dimensional Treatments: Application to Conjoint Analysis". 
+This package estimates heterogeneous effects in factorial and conjoint experiments. Its details are fully described in [Goplerud, Imai, and Pashley (2025)](https://doi.org/10.1214/24-AOAS1994): "Estimating Heterogeneous Causal Effects of High-Dimensional Treatments: Application to Conjoint Analysis". 
 
 The core method is a Bayesian regularized finite mixture-of-experts where moderators can affect an individual's probability of cluster membership and a sparsity-inducing prior fuses together levels of each factor in each cluster while respecting ANOVA-style sum-to-zero constraints described in [Egami and Imai (2019)](https://imai.fas.harvard.edu/research/files/int.pdf). The posterior mode is found using an AECM algorithm with a number of techniques to accelerate convergence. Approximate quantification of uncertainty is provided by examining the Hessian of the log-posterior. Additional details are explained in the paper and (briefly) in the package documentation.
 

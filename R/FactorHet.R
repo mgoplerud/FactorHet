@@ -140,7 +140,7 @@
 #' 
 #' Goplerud, Max, Kosuke Imai, and Nicole E. Pashley. 2025. "Estimating
 #' Heterogeneous Causal Effects of High-Dimensional Treatments: Application to
-#' Conjoint Analysis." \emph{Annals of Applied Statistics} 19(2): 866-888.
+#' Conjoint Analysis." \emph{Annals of Applied Statistics} 19(2): 866-888. \doi{10.1214/24-AOAS1994}
 #' 
 #' @export
 FactorHet <- function(formula, design, K, lambda, 

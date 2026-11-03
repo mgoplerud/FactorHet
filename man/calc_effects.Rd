@@ -181,7 +181,7 @@ Egami, Naoki and Kosuke Imai. 2019. "Causal Interaction in
 
   Goplerud, Max, Kosuke Imai, and Nicole E. Pashley. 2025. "Estimating
   Heterogeneous Causal Effects of High-Dimensional Treatments: Application to
-  Conjoint Analysis." arxiv preprint: \url{https://arxiv.org/abs/2201.01357}
+  Conjoint Analysis." \emph{Annals of Applied Statistics} 19(2): 866-888. \doi{10.1214/24-AOAS1994}
  
   Leeper, Thomas J., Sara B. Hobolt, and James Tilley. 2020. "Measuring Subgroup
   Preferences in Conjoint Experiments." \emph{Political Analysis}. 28(2):207-221.
