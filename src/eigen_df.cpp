@@ -10,9 +10,9 @@ using namespace Rcpp;
 // For logistic regression
 // [[Rcpp::export]]
 double trace_df_cpp(
-  const Eigen::MappedSparseMatrix<double> X,
+  const Eigen::Map<Eigen::SparseMatrix<double>> X,
   const Eigen::Map<Eigen::MatrixXd> beta,
-  const Eigen::MappedSparseMatrix<double> ridge
+  const Eigen::Map<Eigen::SparseMatrix<double>> ridge
 ){
   
   int p = X.cols();
@@ -46,8 +46,8 @@ double trace_df_cpp(
 
 // [[Rcpp::export]]
 double trace_AinvB_sparse(
-    const Eigen::MappedSparseMatrix<double> A,
-    const Eigen::MappedSparseMatrix<double> B
+    const Eigen::Map<Eigen::SparseMatrix<double>> A,
+    const Eigen::Map<Eigen::SparseMatrix<double>> B
 ){
   
   Eigen::SimplicialLDLT<Eigen::SparseMatrix<double> > llt;
@@ -69,7 +69,7 @@ double trace_AinvB_sparse(
 
 // [[Rcpp::export]]
 double trace_AinvB(
-    const Eigen::MappedSparseMatrix<double> A,
+    const Eigen::Map<Eigen::SparseMatrix<double>> A,
     const Eigen::Map<Eigen::MatrixXd> B
 ){
   
@@ -91,8 +91,8 @@ double trace_AinvB(
 
 // [[Rcpp::export]]
 double fast_sparse_df(
-    const Eigen::MappedSparseMatrix<double> LL,
-    const Eigen::MappedSparseMatrix<double> PR
+    const Eigen::Map<Eigen::SparseMatrix<double>> LL,
+    const Eigen::Map<Eigen::SparseMatrix<double>> PR
 ){
   
   Eigen::SimplicialLDLT<Eigen::SparseMatrix<double> > llt;

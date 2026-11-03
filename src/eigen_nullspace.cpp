@@ -7,7 +7,7 @@ using namespace Rcpp;
 // Fast Calculation of Basis for Null Space.
 // [[Rcpp::export]]
 Eigen::SparseMatrix<double> calculate_nullspace_basis(
-    const Eigen::MappedSparseMatrix<double> X
+    const Eigen::Map<Eigen::SparseMatrix<double>> X
 ){
   //Perform QR
   Eigen::SparseQR<Eigen::SparseMatrix<double>, Eigen::COLAMDOrdering<int> > obj;
@@ -65,7 +65,7 @@ Eigen::SparseMatrix<double> calculate_nullspace_basis(
 // Rank of matrix from QR
 // [[Rcpp::export]]
 int rank_sparse(
-    const Eigen::MappedSparseMatrix<double> X
+    const Eigen::Map<Eigen::SparseMatrix<double>> X
 ){
   Eigen::SparseQR<Eigen::SparseMatrix<double>, Eigen::COLAMDOrdering<int> > obj;
   //obj.setPivotThreshold(tol);
